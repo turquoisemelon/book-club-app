@@ -1,36 +1,30 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Book Club
 
-## Getting Started
+A mobile-web app for running small book clubs, with an AI co-host that drafts the busywork for the host to approve.
 
-First, run the development server:
+This is the **clickable prototype**: every screen of the host flow works, using sample data saved in the browser's localStorage. There is no backend yet, and the co-host writes its drafts from templates instead of calling Claude.
+
+## What you can try
+
+- Start a club and share a one-tap invite link (`/join/<club>`)
+- Vote in a book poll, add books from a live Open Library search, close the poll
+- Mark reading progress and watch spoiler-gated discussion topics unlock
+- Schedule meetups, RSVP, add to calendar
+- Co-host inbox: discussion questions, reminders, next-book shortlist, recaps; approve, edit or discard
+- Directory of local clubs that are open to new members
+- Goodreads CSV import (parsed in the browser)
+
+"Prototype controls" on the home screen switch between host and member view and reset the sample data.
+
+## Run it
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000 (narrow the window or use your browser's phone view).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Stack
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Next.js (App Router) + TypeScript + Tailwind. See the tech stack doc for where this is going: Supabase for data and auth, Claude for the co-host, Vercel for hosting.
