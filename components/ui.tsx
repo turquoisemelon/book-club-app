@@ -106,9 +106,11 @@ export function AvatarStack({ users, max = 5 }: { users: (User | undefined)[]; m
 const coverColors = ["#2f5d50", "#9a5b13", "#5b6abf", "#a23b72", "#2d7d9a", "#6b4f9e"];
 
 export function BookCover({ book, width = 64 }: { book?: Book; width?: number }) {
-  const [failed, setFailed] = useState(false);
+  // Remember which URL failed, so picking a new cover gets a fresh try.
+  const [failedUrl, setFailedUrl] = useState<string>();
   const height = Math.round(width * 1.5);
   const url = book ? coverUrl(book, width > 90 ? "L" : "M") : undefined;
+  const failed = url !== undefined && url === failedUrl;
   if (!book) {
     return <div className="shrink-0 rounded-md bg-line" style={{ width, height }} />;
   }
@@ -137,7 +139,7 @@ export function BookCover({ book, width = 64 }: { book?: Book; width?: number })
       alt={`Cover of ${book.title}`}
       width={width}
       height={height}
-      onError={() => setFailed(true)}
+      onError={() => setFailedUrl(url)}
       className="shrink-0 rounded-md bg-line object-cover shadow-sm"
       style={{ width, height }}
     />

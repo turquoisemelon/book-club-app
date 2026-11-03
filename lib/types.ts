@@ -12,6 +12,9 @@ export type Book = {
   author: string;
   isbn?: string;
   coverId?: number;
+  // A cover the host picked: an image URL found online, or a small uploaded
+  // photo stored as a data: URL. Wins over coverId/isbn when set.
+  cover?: string;
   pages?: number;
   sections: number;
   sectionLabel: "Chapter" | "Part";
