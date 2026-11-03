@@ -85,6 +85,13 @@ export type Announcement = {
   aiDrafted?: boolean;
 };
 
+export type PastRead = {
+  id: string;
+  bookId: string;
+  // When the club met to discuss it (ISO string).
+  metAt: string;
+};
+
 export type Club = {
   id: string;
   name: string;
@@ -101,6 +108,8 @@ export type Club = {
   drafts: Draft[];
   announcements: Announcement[];
   joinRequests: string[];
+  // Optional so clubs saved before this field existed keep loading.
+  pastReads?: PastRead[];
 };
 
 export type ShelfEntry = {

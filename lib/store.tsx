@@ -235,6 +235,21 @@ export const actions = {
     if (draft) draft.status = "discarded";
   },
 
+  addPastRead(db: DB, clubId: string, input: { title: string; author: string; metAt: string }) {
+    const club = clubIn(db, clubId);
+    const title = input.title.trim();
+    const author = input.author.trim();
+    const known = db.books.find((b) => b.title.toLowerCase() === title.toLowerCase() && b.author.toLowerCase() === author.toLowerCase());
+    const bookId = known?.id ?? uid("b");
+    if (!known) db.books.push({ id: bookId, title, author, sections: 1, sectionLabel: "Chapter" });
+    club.pastReads = [...(club.pastReads ?? []), { id: uid("pr"), bookId, metAt: input.metAt }].sort((a, b) => b.metAt.localeCompare(a.metAt));
+  },
+
+  removePastRead(db: DB, clubId: string, pastReadId: string) {
+    const club = clubIn(db, clubId);
+    club.pastReads = (club.pastReads ?? []).filter((p) => p.id !== pastReadId);
+  },
+
   importShelf(db: DB, entries: { book: Book; shelf: "read" | "to-read" | "currently-reading"; rating?: number }[]) {
     const shelf = db.shelves[db.meId] ?? [];
     for (const e of entries) {
