@@ -250,6 +250,13 @@ export const actions = {
     club.pastReads = (club.pastReads ?? []).filter((p) => p.id !== pastReadId);
   },
 
+  deleteClub(db: DB, clubId: string) {
+    const club = db.clubs.find((c) => c.id === clubId);
+    if (!club || !club.members.some((m) => m.userId === db.meId && m.role === "host")) return;
+    db.clubs = db.clubs.filter((c) => c.id !== clubId);
+    db.requested = db.requested.filter((id) => id !== clubId);
+  },
+
   importShelf(db: DB, entries: { book: Book; shelf: "read" | "to-read" | "currently-reading"; rating?: number }[]) {
     const shelf = db.shelves[db.meId] ?? [];
     for (const e of entries) {
