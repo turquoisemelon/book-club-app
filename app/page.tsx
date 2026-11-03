@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useStore } from "@/lib/store";
 import { daysUntil } from "@/lib/format";
-import { AvatarStack, BookCover, ButtonLink, Card, Pill, SectionTitle, SparkleIcon, cx } from "@/components/ui";
+import { AvatarStack, BookCover, ButtonLink, ClubImage, Card, Pill, SectionTitle, SparkleIcon, cx } from "@/components/ui";
 
 export default function Home() {
   const { db, mutate, reset } = useStore();
@@ -47,13 +47,13 @@ export default function Home() {
           return (
             <Link key={club.id} href={`/clubs/${club.id}`} className="block active:scale-[0.99]">
               <Card className="flex gap-4">
-                <BookCover book={book} width={60} />
+                <ClubImage club={club} books={db.books} width={60} />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-2">
                     <h3 className="font-serif text-lg font-semibold leading-tight">{club.name}</h3>
                     {isHost && <Pill tone="accent">Host</Pill>}
                   </div>
-                  <p className="mt-0.5 truncate text-sm text-muted">{book ? `Reading ${book.title}` : "Choosing a first book"}</p>
+                  <p className="mt-0.5 truncate text-sm text-muted">{book ? `Reading ${book.title}` : club.pastReads?.length ? "Choosing the next book" : "Choosing a first book"}</p>
                   <div className="mt-3 flex items-center justify-between">
                     <AvatarStack users={club.members.map((m) => db.users.find((u) => u.id === m.userId))} max={4} />
                     {next && <span className="text-xs text-muted">Meets {daysUntil(next.date)}</span>}

@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { actions, useStore } from "@/lib/store";
 import { daysUntil } from "@/lib/format";
-import { BookCover, Button, Card, Pill, TopBar, cx } from "@/components/ui";
+import { Button, ClubImage, Card, Pill, TopBar, cx } from "@/components/ui";
 
 export default function Directory() {
   const { db, mutate } = useStore();
@@ -36,7 +36,7 @@ export default function Directory() {
             return (
               <Card key={club.id}>
                 <div className="flex gap-3">
-                  <BookCover book={book} width={56} />
+                  <ClubImage club={club} books={db.books} width={56} />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-2">
                       <h3 className="font-serif text-lg font-semibold leading-tight">{club.name}</h3>
