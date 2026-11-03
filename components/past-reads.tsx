@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { actions, useStore } from "@/lib/store";
 import { formatDay, formatTime } from "@/lib/format";
-import type { Club } from "@/lib/types";
+import type { Book, Club } from "@/lib/types";
+import { CoverPicker, CoverSheet } from "./cover-picker";
 import { BookCover, Button, Card, Field, SectionTitle, inputClass } from "./ui";
 
 export function PastReads({ club, isHost }: { club: Club; isHost: boolean }) {
@@ -13,6 +14,8 @@ export function PastReads({ club, isHost }: { club: Club; isHost: boolean }) {
   const [author, setAuthor] = useState("");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("20:00");
+  const [cover, setCover] = useState<string>();
+  const [editing, setEditing] = useState<Book>();
   const reads = club.pastReads ?? [];
 
   if (!isHost && reads.length === 0) return null;
@@ -22,6 +25,7 @@ export function PastReads({ club, isHost }: { club: Club; isHost: boolean }) {
     setTitle("");
     setAuthor("");
     setDate("");
+    setCover(undefined);
   };
 
   return (
@@ -47,6 +51,7 @@ export function PastReads({ club, isHost }: { club: Club; isHost: boolean }) {
           <Field label="Author (optional)">
             <input value={author} onChange={(e) => setAuthor(e.target.value)} className={inputClass} />
           </Field>
+          <CoverPicker title={title} author={author} value={cover} onChange={setCover} />
           <div className="flex gap-2">
             <Field label="Meeting date">
               <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputClass} />
@@ -63,7 +68,7 @@ export function PastReads({ club, isHost }: { club: Club; isHost: boolean }) {
               className="flex-1"
               disabled={!title.trim() || !date}
               onClick={() => {
-                mutate((d) => actions.addPastRead(d, club.id, { title, author, metAt: new Date(`${date}T${time || "00:00"}`).toISOString() }));
+                mutate((d) => actions.addPastRead(d, club.id, { title, author, cover, metAt: new Date(`${date}T${time || "00:00"}`).toISOString() }));
                 close();
               }}
             >
@@ -79,7 +84,13 @@ export function PastReads({ club, isHost }: { club: Club; isHost: boolean }) {
             const book = db.books.find((b) => b.id === r.bookId);
             return (
               <Card key={r.id} className="flex items-center gap-3">
-                <BookCover book={book} width={40} />
+                {isHost && book ? (
+                  <button onClick={() => setEditing(book)} aria-label={`Change cover of ${book.title}`} className="shrink-0 active:opacity-70">
+                    <BookCover book={book} width={40} />
+                  </button>
+                ) : (
+                  <BookCover book={book} width={40} />
+                )}
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">{book?.title}</p>
                   <p className="truncate text-sm text-muted">
@@ -103,6 +114,18 @@ export function PastReads({ club, isHost }: { club: Club; isHost: boolean }) {
         </div>
       ) : (
         !adding && <Card className="text-center text-sm text-muted">Add books your club read before joining the app.</Card>
+      )}
+      {isHost && reads.length > 0 && <p className="mt-2 px-1 text-xs text-muted">Tap a cover to change it.</p>}
+
+      {editing && (
+        <CoverSheet
+          book={editing}
+          onClose={() => setEditing(undefined)}
+          onSave={(c) => {
+            mutate((d) => actions.setBookCover(d, editing.id, c));
+            setEditing(undefined);
+          }}
+        />
       )}
     </>
   );

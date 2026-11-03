@@ -1,6 +1,6 @@
 "use client";
 
-import { use } from "react";
+import { use, useState } from "react";
 import Link from "next/link";
 import { actions, useClub } from "@/lib/store";
 import { timeAgo } from "@/lib/format";
@@ -8,13 +8,17 @@ import { MeetupCard } from "@/components/meetup-card";
 import { ProgressPicker } from "@/components/progress-picker";
 import { PastReads } from "@/components/past-reads";
 import { DeleteClub } from "@/components/delete-club";
-import { AiLabel, Avatar, BookCover, ButtonLink, Card, SectionTitle, SparkleIcon, Toggle, TopBar } from "@/components/ui";
+import { CoverSheet } from "@/components/cover-picker";
+import { CurrentReadForm } from "@/components/current-read-form";
+import { AiLabel, Avatar, BookCover, Button, ButtonLink, Card, SectionTitle, SparkleIcon, Toggle, TopBar } from "@/components/ui";
 import { useStore } from "@/lib/store";
 
 export default function ClubHome({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { club, book, me, isHost, db } = useClub(id);
   const { mutate } = useStore();
+  const [settingBook, setSettingBook] = useState(false);
+  const [editingCover, setEditingCover] = useState(false);
   if (!club) return null;
 
   const next = club.meetups.find((m) => new Date(m.date) > new Date());
@@ -64,11 +68,22 @@ export default function ClubHome({ params }: { params: Promise<{ id: string }> }
         {book ? (
           <Card>
             <div className="flex gap-4">
-              <BookCover book={book} width={84} />
+              {isHost ? (
+                <button onClick={() => setEditingCover(true)} aria-label={`Change cover of ${book.title}`} className="shrink-0 active:opacity-70">
+                  <BookCover book={book} width={84} />
+                </button>
+              ) : (
+                <BookCover book={book} width={84} />
+              )}
               <div className="min-w-0">
                 <h3 className="font-serif text-xl font-semibold leading-tight">{book.title}</h3>
                 <p className="text-sm text-muted">{book.author}</p>
                 {book.blurb && <p className="mt-2 text-sm leading-snug">{book.blurb}</p>}
+                {isHost && (
+                  <button onClick={() => setEditingCover(true)} className="mt-2 text-sm font-medium text-accent">
+                    Change cover
+                  </button>
+                )}
               </div>
             </div>
             {me && (
@@ -77,15 +92,32 @@ export default function ClubHome({ params }: { params: Promise<{ id: string }> }
               </div>
             )}
           </Card>
+        ) : settingBook ? (
+          <CurrentReadForm clubId={id} onDone={() => setSettingBook(false)} />
         ) : (
           <Card className="text-center">
             <p className="text-sm text-muted">No book yet.</p>
             {isHost && (
-              <ButtonLink href={`/clubs/${id}/polls`} size="sm" className="mt-3">
-                Pick the first book
-              </ButtonLink>
+              <div className="mt-3 flex flex-wrap justify-center gap-2">
+                <Button size="sm" onClick={() => setSettingBook(true)}>
+                  Add what we&apos;re reading
+                </Button>
+                <ButtonLink href={`/clubs/${id}/polls`} size="sm" variant="secondary">
+                  Run a poll
+                </ButtonLink>
+              </div>
             )}
           </Card>
+        )}
+        {book && editingCover && (
+          <CoverSheet
+            book={book}
+            onClose={() => setEditingCover(false)}
+            onSave={(cover) => {
+              mutate((d) => actions.setBookCover(d, book.id, cover));
+              setEditingCover(false);
+            }}
+          />
         )}
 
         <SectionTitle action={<Link href={`/clubs/${id}/meetups`} className="text-sm font-medium text-accent">All</Link>}>Next meetup</SectionTitle>

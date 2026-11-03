@@ -1,6 +1,7 @@
 import type { Book } from "./types";
 
 export function coverUrl(book: Book, size: "S" | "M" | "L" = "M") {
+  if (book.cover) return book.cover;
   if (book.coverId) return `https://covers.openlibrary.org/b/id/${book.coverId}-${size}.jpg?default=false`;
   if (book.isbn) return `https://covers.openlibrary.org/b/isbn/${book.isbn}-${size}.jpg?default=false`;
   return undefined;
@@ -30,6 +31,75 @@ export async function searchOpenLibrary(query: string, signal?: AbortSignal): Pr
     sections: 20,
     sectionLabel: "Chapter",
   }));
+}
+
+export type CoverOption = {
+  url: string;
+  title: string;
+  author?: string;
+  source: "Open Library" | "Google Books";
+};
+
+async function openLibraryCovers(title: string, author: string, signal?: AbortSignal): Promise<CoverOption[]> {
+  const params = new URLSearchParams({ title, fields: "title,author_name,cover_i", limit: "12" });
+  if (author) params.set("author", author);
+  const res = await fetch(`https://openlibrary.org/search.json?${params}`, { signal });
+  if (!res.ok) throw new Error(`Open Library returned ${res.status}`);
+  const data = (await res.json()) as { docs: { title: string; author_name?: string[]; cover_i?: number }[] };
+  return data.docs
+    .filter((d) => d.cover_i)
+    .map((d) => ({ url: `https://covers.openlibrary.org/b/id/${d.cover_i}-M.jpg`, title: d.title, author: d.author_name?.[0], source: "Open Library" as const }));
+}
+
+type GoogleVolume = { volumeInfo: { title: string; authors?: string[]; imageLinks?: { thumbnail?: string; smallThumbnail?: string } } };
+
+async function googleBooksCovers(title: string, author: string, signal?: AbortSignal): Promise<CoverOption[]> {
+  // Google Books has good coverage of Turkish and other non-English editions.
+  const q = `intitle:${title}${author ? ` inauthor:${author}` : ""}`;
+  const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=12&printType=books`, { signal });
+  if (!res.ok) throw new Error(`Google Books returned ${res.status}`);
+  const data = (await res.json()) as { items?: GoogleVolume[] };
+  return (data.items ?? []).flatMap(({ volumeInfo: v }) => {
+    const link = v.imageLinks?.thumbnail ?? v.imageLinks?.smallThumbnail;
+    if (!link) return [];
+    return [{ url: link.replace(/^http:/, "https:").replace("&edge=curl", ""), title: v.title, author: v.authors?.[0], source: "Google Books" as const }];
+  });
+}
+
+// Looks a book up in Open Library and Google Books at the same time and
+// returns every cover found. Fails only when both sources fail.
+export async function searchCovers(title: string, author: string, signal?: AbortSignal): Promise<CoverOption[]> {
+  const t = title.trim();
+  const a = author.trim();
+  const settled = await Promise.allSettled([googleBooksCovers(t, a, signal), openLibraryCovers(t, a, signal)]);
+  if (settled.every((r) => r.status === "rejected")) throw (settled[0] as PromiseRejectedResult).reason;
+  const seen = new Set<string>();
+  const lists = settled.map((r) => (r.status === "fulfilled" ? r.value : []));
+  // Interleave the two sources so both show up near the top.
+  const out: CoverOption[] = [];
+  for (let i = 0; i < Math.max(...lists.map((l) => l.length)); i++) {
+    for (const list of lists) {
+      const c = list[i];
+      if (c && !seen.has(c.url)) {
+        seen.add(c.url);
+        out.push(c);
+      }
+    }
+  }
+  return out.slice(0, 18);
+}
+
+// Shrinks a photo to a small JPEG so it fits in the browser's storage
+// (about 20 KB instead of several MB straight off a phone camera).
+export async function shrinkImage(file: File, maxHeight = 360): Promise<string> {
+  const bitmap = await createImageBitmap(file);
+  const scale = Math.min(1, maxHeight / bitmap.height);
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(bitmap.width * scale);
+  canvas.height = Math.round(bitmap.height * scale);
+  canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close();
+  return canvas.toDataURL("image/jpeg", 0.8);
 }
 
 // Goodreads exports a CSV with quoted fields and ISBNs written as ="978...".

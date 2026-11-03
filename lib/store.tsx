@@ -83,6 +83,21 @@ function clubIn(db: DB, id: string): Club {
   return club;
 }
 
+// Reuses a book already in the app with the same title and author, so a cover
+// picked once shows everywhere that book appears.
+function findOrAddBook(db: DB, rawTitle: string, rawAuthor: string, cover: string | undefined, sections: number) {
+  const title = rawTitle.trim();
+  const author = rawAuthor.trim();
+  const known = db.books.find((b) => b.title.toLowerCase() === title.toLowerCase() && b.author.toLowerCase() === author.toLowerCase());
+  if (known) {
+    if (cover) known.cover = cover;
+    return known.id;
+  }
+  const id = uid("b");
+  db.books.push({ id, title, author, cover, sections, sectionLabel: "Chapter" });
+  return id;
+}
+
 function addDraft(club: Club, draft: Omit<Draft, "id" | "status" | "createdAt">) {
   club.drafts.unshift({ ...draft, id: uid("d"), status: "pending", createdAt: new Date().toISOString() });
 }
@@ -235,14 +250,22 @@ export const actions = {
     if (draft) draft.status = "discarded";
   },
 
-  addPastRead(db: DB, clubId: string, input: { title: string; author: string; metAt: string }) {
+  addPastRead(db: DB, clubId: string, input: { title: string; author: string; metAt: string; cover?: string }) {
     const club = clubIn(db, clubId);
-    const title = input.title.trim();
-    const author = input.author.trim();
-    const known = db.books.find((b) => b.title.toLowerCase() === title.toLowerCase() && b.author.toLowerCase() === author.toLowerCase());
-    const bookId = known?.id ?? uid("b");
-    if (!known) db.books.push({ id: bookId, title, author, sections: 1, sectionLabel: "Chapter" });
+    const bookId = findOrAddBook(db, input.title, input.author, input.cover, 1);
     club.pastReads = [...(club.pastReads ?? []), { id: uid("pr"), bookId, metAt: input.metAt }].sort((a, b) => b.metAt.localeCompare(a.metAt));
+  },
+
+  // Sets what the club is reading without running a poll.
+  setCurrentRead(db: DB, clubId: string, input: { title: string; author: string; cover?: string }) {
+    const club = clubIn(db, clubId);
+    club.currentBookId = findOrAddBook(db, input.title, input.author, input.cover, 20);
+    for (const m of club.members) m.progress = 0;
+  },
+
+  setBookCover(db: DB, bookId: string, cover?: string) {
+    const book = db.books.find((b) => b.id === bookId);
+    if (book) book.cover = cover;
   },
 
   removePastRead(db: DB, clubId: string, pastReadId: string) {
