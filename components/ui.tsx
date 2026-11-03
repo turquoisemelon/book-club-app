@@ -10,7 +10,7 @@ export function cx(...parts: (string | false | null | undefined)[]) {
 }
 
 type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: "primary" | "secondary" | "ghost" | "ai";
+  variant?: "primary" | "secondary" | "ghost" | "ai" | "danger";
   size?: "md" | "sm";
 };
 
@@ -19,6 +19,7 @@ const buttonStyles = {
   secondary: "bg-card text-ink border border-line active:bg-paper",
   ghost: "text-accent active:bg-accent-soft",
   ai: "bg-ai text-white active:bg-[#7d4a0f]",
+  danger: "bg-danger text-white active:bg-[#82291e]",
 };
 
 export function Button({ variant = "primary", size = "md", className, ...props }: ButtonProps) {

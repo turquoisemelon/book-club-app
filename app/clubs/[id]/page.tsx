@@ -7,6 +7,7 @@ import { timeAgo } from "@/lib/format";
 import { MeetupCard } from "@/components/meetup-card";
 import { ProgressPicker } from "@/components/progress-picker";
 import { PastReads } from "@/components/past-reads";
+import { DeleteClub } from "@/components/delete-club";
 import { AiLabel, Avatar, BookCover, ButtonLink, Card, SectionTitle, SparkleIcon, Toggle, TopBar } from "@/components/ui";
 import { useStore } from "@/lib/store";
 
@@ -155,6 +156,7 @@ export default function ClubHome({ params }: { params: Promise<{ id: string }> }
               </div>
               <Toggle checked={club.openToMembers} onChange={(v) => mutate((d) => actions.setOpen(d, id, v))} label="Open to new members" />
             </Card>
+            <DeleteClub club={club} />
           </>
         )}
       </main>
