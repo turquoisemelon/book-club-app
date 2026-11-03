@@ -3,11 +3,11 @@
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { useClub } from "@/lib/store";
-import { BookCover, Button, Card, TopBar } from "@/components/ui";
+import { Button, Card, ClubImage, TopBar } from "@/components/ui";
 
 export default function Invite({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { club, book } = useClub(id);
+  const { club, book, db } = useClub(id);
   const [origin, setOrigin] = useState("");
   const [copied, setCopied] = useState(false);
 
@@ -62,7 +62,7 @@ export default function Invite({ params }: { params: Promise<{ id: string }> }) 
         <p className="mb-2 mt-6 px-1 text-[13px] font-semibold uppercase tracking-wide text-muted">What they&apos;ll see</p>
         <Link href={`/join/${id}`} className="block">
           <Card className="flex items-center gap-3">
-            <BookCover book={book} width={44} />
+            <ClubImage club={club} books={db.books} width={44} />
             <div className="flex-1">
               <p className="font-semibold">{club.name}</p>
               <p className="text-sm text-muted">{club.members.length} members · tap to preview the join page</p>

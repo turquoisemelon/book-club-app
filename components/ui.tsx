@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { coverUrl } from "@/lib/books";
-import type { Book, User } from "@/lib/types";
+import type { Book, Club, User } from "@/lib/types";
 
 export function cx(...parts: (string | false | null | undefined)[]) {
   return parts.filter(Boolean).join(" ");
@@ -141,6 +141,62 @@ export function BookCover({ book, width = 64 }: { book?: Book; width?: number })
       className="shrink-0 rounded-md bg-line object-cover shadow-sm"
       style={{ width, height }}
     />
+  );
+}
+
+// The book that best represents a club: what it's reading now, otherwise the
+// most recent book it met about.
+export function clubCoverBook(club: Club, books: Book[]): Book | undefined {
+  const current = books.find((b) => b.id === club.currentBookId);
+  if (current) return current;
+  const latest = [...(club.pastReads ?? [])].sort((a, b) => b.metAt.localeCompare(a.metAt));
+  for (const read of latest) {
+    const book = books.find((b) => b.id === read.bookId);
+    if (book) return book;
+  }
+  return undefined;
+}
+
+function clubInitials(name: string) {
+  const words = name
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .split(/\s+/)
+    .filter((w) => w && !/^(the|a|an|of|and|&)$/i.test(w));
+  const picked = words.length ? words : name.trim().split(/\s+/);
+  return picked
+    .slice(0, 2)
+    .map((w) => [...w][0] ?? "")
+    .join("")
+    .toUpperCase();
+}
+
+function hashString(s: string) {
+  let h = 0;
+  for (const ch of s) h = (h * 31 + ch.codePointAt(0)!) >>> 0;
+  return h;
+}
+
+// A club's picture: the cover of its current (or latest) book, or a tile with
+// the club's initials when it hasn't read anything yet.
+export function ClubImage({ club, books, width = 64 }: { club: Club; books: Book[]; width?: number }) {
+  const book = clubCoverBook(club, books);
+  if (book) return <BookCover book={book} width={width} />;
+  const height = Math.round(width * 1.5);
+  const color = coverColors[hashString(club.id) % coverColors.length];
+  return (
+    <div
+      role="img"
+      aria-label={`${club.name} club`}
+      className="relative flex shrink-0 items-center justify-center overflow-hidden rounded-md text-white shadow-sm"
+      style={{ width, height, background: `linear-gradient(160deg, ${color}, color-mix(in srgb, ${color} 70%, black))` }}
+    >
+      <span aria-hidden className="absolute inset-y-0 left-0 w-[8%] bg-black/15" />
+      <span aria-hidden className="absolute inset-x-[16%] top-[12%] h-px bg-white/35" />
+      <span aria-hidden className="absolute inset-x-[16%] bottom-[12%] h-px bg-white/35" />
+      <span className="pl-[6%] font-serif font-semibold tracking-wide" style={{ fontSize: Math.max(12, width / 3.2) }}>
+        {clubInitials(club.name)}
+      </span>
+    </div>
   );
 }
 
