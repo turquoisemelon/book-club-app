@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useAuth } from "@/lib/auth";
 import { useStore } from "@/lib/store";
 import { daysUntil } from "@/lib/format";
 import { AvatarStack, BookCover, ButtonLink, ClubImage, Card, Pill, SectionTitle, SparkleIcon, cx } from "@/components/ui";
@@ -10,6 +11,7 @@ export default function Home() {
   const myClubs = db.clubs.filter((c) => c.members.some((m) => m.userId === db.meId));
   const shelf = db.shelves[db.meId] ?? [];
   const me = db.users.find((u) => u.id === db.meId);
+  const auth = useAuth();
 
   return (
     <main className="px-4 pb-10">
@@ -19,7 +21,17 @@ export default function Home() {
           <img src="/icon.svg" alt="" width={32} height={32} className="rounded-lg" />
           <span className="font-serif text-xl font-semibold">Book Club</span>
         </div>
-        <span className="text-sm text-muted">Hi, {me?.name}</span>
+        {!auth.enabled ? (
+          <span className="text-sm text-muted">Hi, {me?.name}</span>
+        ) : auth.loading ? null : auth.user ? (
+          <Link href="/account" className="text-sm text-muted">
+            Hi, {auth.profile?.name || me?.name}
+          </Link>
+        ) : (
+          <Link href="/sign-in" className="text-sm font-medium text-accent">
+            Sign in
+          </Link>
+        )}
       </header>
 
       <section className="mt-4 rounded-3xl bg-accent px-5 py-6 text-white">

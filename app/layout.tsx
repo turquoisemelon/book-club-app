@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Fraunces, Inter } from "next/font/google";
+import { AuthProvider } from "@/lib/auth";
 import { StoreProvider } from "@/lib/store";
 import "./globals.css";
 
@@ -23,7 +24,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="en" className={`${inter.variable} ${fraunces.variable} antialiased`}>
       <body>
         <div className="mx-auto min-h-dvh w-full max-w-md bg-paper shadow-[0_0_40px_rgba(0,0,0,0.06)]">
-          <StoreProvider>{children}</StoreProvider>
+          <AuthProvider>
+            <StoreProvider>{children}</StoreProvider>
+          </AuthProvider>
         </div>
       </body>
     </html>
