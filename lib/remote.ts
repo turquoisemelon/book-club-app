@@ -5,14 +5,10 @@
 // and writes only what changed: books, club rows, and member rows.
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Book, Club, DB, Membership, User } from "./types";
-import { DB_VERSION, makeSampleDB } from "./sample-data";
+import { DB_VERSION } from "./sample-data";
 
 // Parts of a club stored together as JSON in clubs.content for now.
-type ClubContent = Pick<Club, "polls" | "meetups" | "threads" | "drafts" | "announcements" | "joinRequests" | "pastReads"> & {
-  // People who appear in a club's history but don't have an account yet,
-  // e.g. members of a club brought over from this device.
-  guests?: User[];
-};
+type ClubContent = Pick<Club, "polls" | "meetups" | "threads" | "drafts" | "announcements" | "joinRequests" | "pastReads">;
 
 type BookRow = {
   id: string;
@@ -121,7 +117,7 @@ function clubFromRow(r: ClubRow, members: Membership[]): Club {
   };
 }
 
-function clubToRow(club: Club, guests: User[] | undefined): ClubRow {
+function clubToRow(club: Club): ClubRow {
   const content: ClubContent = {
     polls: club.polls,
     meetups: club.meetups,
@@ -131,7 +127,6 @@ function clubToRow(club: Club, guests: User[] | undefined): ClubRow {
     joinRequests: club.joinRequests,
     pastReads: club.pastReads ?? [],
   };
-  if (guests?.length) content.guests = guests;
   return {
     id: club.id,
     name: club.name,
@@ -145,9 +140,6 @@ function clubToRow(club: Club, guests: User[] | undefined): ClubRow {
   };
 }
 
-// Guests live in club content; remember which club each came from so saving
-// a club keeps its guests.
-const guestsByClub = new Map<string, User[]>();
 // When each club was last saved, as loaded. A save only goes through if nobody
 // else saved the club since, so one member's change never silently erases
 // another's (e.g. two people posting at once).
@@ -181,13 +173,9 @@ export async function loadRemote(supabase: SupabaseClient, userId: string): Prom
   }
   if (!users.has(userId)) users.set(userId, { id: userId, name: "You", color: colorFor(userId) });
 
-  guestsByClub.clear();
   savedAtByClub.clear();
   for (const r of clubRows) {
     savedAtByClub.set(r.id, r.updated_at);
-    const guests = r.content?.guests ?? [];
-    guestsByClub.set(r.id, guests);
-    for (const g of guests) if (!users.has(g.id)) users.set(g.id, g);
   }
 
   const clubs = clubRows.map((r) =>
@@ -232,7 +220,7 @@ export async function saveChanges(supabase: SupabaseClient, prev: DB, next: DB) 
   for (const club of next.clubs) {
     const before = prevClubs.get(club.id);
     if (same(before, club)) continue;
-    const row = clubToRow(club, guestsByClub.get(club.id));
+    const row = clubToRow(club);
 
     if (!before) {
       // Creating a club makes you its host (a database trigger adds you).
@@ -268,55 +256,6 @@ export async function saveChanges(supabase: SupabaseClient, prev: DB, next: DB) 
       if (isAccountId(m.userId) && !afterMembers.has(m.userId)) {
         await check(supabase.from("club_members").delete().eq("club_id", club.id).eq("user_id", m.userId));
       }
-    }
-  }
-}
-
-// --- Bringing clubs over from the local prototype ---------------------------
-
-// Replaces one person's id everywhere in a club: member lists, votes, RSVPs, posts.
-function remapId<T>(value: T, from: string, to: string): T {
-  if (value === from) return to as T;
-  if (Array.isArray(value)) return value.map((v) => remapId(v, from, to)) as T;
-  if (value && typeof value === "object") {
-    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k === from ? to : k, remapId(v, from, to)])) as T;
-  }
-  return value;
-}
-
-// Clubs you created on this device. The prototype's sample clubs are left out.
-export function clubsToBringOver(local: DB) {
-  const sampleIds = new Set(makeSampleDB().clubs.map((c) => c.id));
-  return local.clubs.filter((c) => !sampleIds.has(c.id) && c.members.some((m) => m.userId === local.meId && m.role === "host"));
-}
-
-// Copies the chosen local clubs into your account. You become the host; other
-// people in them are kept as guests (names on their posts and votes) until
-// they join with their own accounts.
-export async function bringOverClubs(supabase: SupabaseClient, userId: string, local: DB, clubIds: string[]) {
-  const usersById = new Map(local.users.map((u) => [u.id, u]));
-  for (const original of local.clubs.filter((c) => clubIds.includes(c.id))) {
-    const club = remapId(structuredClone(original), local.meId, userId);
-    const newId = `c-${crypto.randomUUID().slice(0, 12)}`;
-
-    const bookIds = new Set<string>();
-    if (club.currentBookId) bookIds.add(club.currentBookId);
-    for (const p of club.pastReads ?? []) bookIds.add(p.bookId);
-    for (const poll of club.polls) for (const o of poll.options) bookIds.add(o.bookId);
-    for (const t of club.threads) if (t.bookId) bookIds.add(t.bookId);
-    for (const d of club.drafts) for (const id of d.bookIds ?? []) bookIds.add(id);
-    const books = local.books.filter((b) => bookIds.has(b.id));
-    if (books.length) await check(supabase.from("books").upsert(books.map(bookToRow)));
-
-    const me = club.members.find((m) => m.userId === userId);
-    const guests = club.members
-      .filter((m) => m.userId !== userId)
-      .map((m) => usersById.get(m.userId))
-      .filter((u): u is User => Boolean(u));
-    const row = clubToRow({ ...club, id: newId }, guests);
-    await check(supabase.from("clubs").insert(row));
-    if (me?.progress) {
-      await check(supabase.from("club_members").update({ progress: me.progress }).eq("club_id", newId).eq("user_id", userId));
     }
   }
 }

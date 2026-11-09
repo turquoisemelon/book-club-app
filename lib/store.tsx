@@ -25,8 +25,7 @@ type Store = {
 
 const StoreContext = createContext<Store | null>(null);
 
-// The prototype data saved in this browser, if any.
-export function loadLocal(): DB | null {
+function loadLocal(): DB | null {
   try {
     const raw = localStorage.getItem(KEY);
     if (raw) {

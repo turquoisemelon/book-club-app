@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { useStore } from "@/lib/store";
-import { BringOverClubs } from "@/components/bring-over";
 import { daysUntil } from "@/lib/format";
 import { AvatarStack, BookCover, ButtonLink, ClubImage, Card, Pill, SectionTitle, SparkleIcon, cx } from "@/components/ui";
 
@@ -49,8 +48,6 @@ export default function Home() {
           </ButtonLink>
         </div>
       </section>
-
-      <BringOverClubs hideable />
 
       <SectionTitle>Your clubs</SectionTitle>
       <div className="space-y-3">

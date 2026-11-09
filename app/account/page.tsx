@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
-import { BringOverClubs } from "@/components/bring-over";
 import { Button, ButtonLink, Card, Field, TopBar, inputClass } from "@/components/ui";
 
 function NameForm({ initial, onSave }: { initial: string; onSave: (name: string) => Promise<string | null> }) {
@@ -60,7 +59,6 @@ export default function Account() {
             <Card>
               <NameForm key={profile ? "loaded" : "loading"} initial={profile?.name ?? ""} onSave={saveName} />
             </Card>
-            <BringOverClubs />
             <Button
               variant="secondary"
               className="w-full"
