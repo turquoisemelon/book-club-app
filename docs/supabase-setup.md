@@ -42,3 +42,39 @@ Never paste the **secret** key (`sb_secret_…`, or `service_role`) anywhere in 
 3. You land on **Your account**. Set your name.
 
 Heads-up: Supabase's built-in email only sends a few sign-in emails per hour. That's fine for us testing. Before inviting a bigger group we'll connect a proper email sender (Resend).
+
+## 6. Send sign-in emails through Resend (before inviting people)
+
+Supabase's built-in email only sends about 2 emails an hour, which runs out after a few tries. Resend is free for up to 3,000 emails a month. Connecting it lifts the limit and makes the emails come from your own address. It takes about 15 minutes.
+
+### 6a. Add your domain to Resend
+
+1. Sign up at https://resend.com.
+2. Open **Domains → Add domain**, enter `chapterclub.app`, pick the region closest to you, and click **Add**.
+3. Resend lists a few DNS records (an MX and a couple of TXT records, one named `resend._domainkey`). Add them to Cloudflare:
+   - **Easiest:** if Resend offers **Sign in to Cloudflare / Auto configure**, use it, and it adds the records for you.
+   - **By hand:** in Cloudflare, open chapterclub.app → **DNS → Records → Add record**. Copy each record's **Type**, **Name** and **Value** (and **Priority** for the MX) exactly. These records don't affect the website.
+4. Back in Resend, click **Verify DNS records**. It usually turns **Verified** within a few minutes, though it can take up to an hour.
+
+### 6b. Make a sending key
+
+1. In Resend, open **API Keys → Create API key**. Name it `supabase`, set permission to **Sending access**, and limit it to `chapterclub.app`.
+2. Copy the key (it starts with `re_`). Resend shows it only once.
+3. This one **is** a secret. Paste it only into Supabase in the next step. Don't paste it in chat, in Vercel, or in the code.
+
+### 6c. Point Supabase at Resend
+
+1. In Supabase, open **Authentication → Emails → SMTP Settings** (on some versions it's under **Project Settings → Authentication**) and switch on **Enable custom SMTP**.
+2. Fill in:
+   - **Sender email:** `hello@chapterclub.app` (any address at your domain works; it doesn't need a real inbox)
+   - **Sender name:** `Chapter Club`
+   - **Host:** `smtp.resend.com`
+   - **Port:** `465`
+   - **Username:** `resend`
+   - **Password:** the `re_…` key from 6b
+3. Save.
+4. Open **Authentication → Rate Limits** and set **emails sent per hour** to `30`. Supabase only lets you change this once custom SMTP is on.
+
+### 6d. Try it
+
+Request a sign-in link at https://chapterclub.app/sign-in. The email should come from Chapter Club <hello@chapterclub.app>. If it doesn't arrive in a minute, check spam, then **Emails → Logs** in Resend.
