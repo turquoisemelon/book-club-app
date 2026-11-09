@@ -1,24 +1,32 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import type { Book, Club, DB, Draft, Rsvp } from "./types";
 import { DB_VERSION, makeSampleDB } from "./sample-data";
 import { questionsFor, recapFor, reminderFor, scheduleFor, shortlistFor } from "./cohost";
 import { uid } from "./format";
+import { useAuth } from "./auth";
+import { getSupabase } from "./supabase/client";
+import { isAccountId, loadRemote, saveChanges, savePrefs } from "./remote";
 
-// Prototype storage: everything lives in this browser's localStorage.
-// The real app moves this to Supabase without changing the screens.
+// Signed out (or before accounts are switched on), everything lives in this
+// browser's localStorage, as in the prototype. Signed in, clubs load from and
+// save to Supabase, and the screens work the same either way.
 const KEY = "book-club-prototype";
 
 type Store = {
   db: DB;
+  // True when data is saved to your account rather than only on this device.
+  synced: boolean;
   mutate: (fn: (draft: DB) => void) => void;
   reset: () => void;
+  reload: () => void;
 };
 
 const StoreContext = createContext<Store | null>(null);
 
-function load(): DB {
+// The prototype data saved in this browser, if any.
+export function loadLocal(): DB | null {
   try {
     const raw = localStorage.getItem(KEY);
     if (raw) {
@@ -26,40 +34,127 @@ function load(): DB {
       if (parsed.version === DB_VERSION) return parsed;
     }
   } catch {}
-  return makeSampleDB();
+  return null;
+}
+
+function load(): DB {
+  return loadLocal() ?? makeSampleDB();
 }
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
-  const [db, setDb] = useState<DB | null>(null);
+  const auth = useAuth();
+  const userId = auth.enabled ? auth.user?.id : undefined;
+  const [db, setDbState] = useState<DB | null>(null);
+  const [loadError, setLoadError] = useState("");
+  const [saveError, setSaveError] = useState("");
+  const [reloads, setReloads] = useState(0);
+  const dbRef = useRef<DB | null>(null);
+  const saving = useRef<Promise<void>>(Promise.resolve());
+
+  const setDb = useCallback((next: DB | null) => {
+    dbRef.current = next;
+    setDbState(next);
+  }, []);
+
+  const reload = useCallback(() => setReloads((n) => n + 1), []);
 
   useEffect(() => {
-    // localStorage only exists in the browser, so the first render waits for it.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setDb(load());
-  }, []);
+    if (auth.loading) return;
+    const supabase = getSupabase();
+    if (!userId || !supabase) {
+      // localStorage only exists in the browser, so the first render waits for it.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setDb(load());
+      return;
+    }
+    let live = true;
+    // Wait for pending saves so a reload never shows stale data.
+    saving.current
+      .then(() => loadRemote(supabase, userId))
+      .then((remote) => {
+        if (!live) return;
+        setLoadError("");
+        setDb(remote);
+      })
+      .catch((e: Error) => live && setLoadError(e.message));
+    return () => {
+      live = false;
+    };
+  }, [auth.loading, userId, reloads, setDb]);
+
+  // Pick up changes other members made when you come back to the app.
+  useEffect(() => {
+    if (!userId) return;
+    const onVisible = () => document.visibilityState === "visible" && reload();
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [userId, reload]);
 
   useEffect(() => {
     if (!db) return;
+    if (userId) {
+      if (db.meId === userId) savePrefs(db);
+      return;
+    }
+    // Never write account data over this device's own clubs (e.g. right after signing out).
+    if (isAccountId(db.meId)) return;
     try {
       localStorage.setItem(KEY, JSON.stringify(db));
     } catch {}
-  }, [db]);
+  }, [db, userId]);
 
-  const mutate = useCallback((fn: (draft: DB) => void) => {
-    setDb((prev) => {
-      if (!prev) return prev;
+  const mutate = useCallback(
+    (fn: (draft: DB) => void) => {
+      const prev = dbRef.current;
+      if (!prev) return;
       const next = structuredClone(prev);
       fn(next);
-      return next;
-    });
-  }, []);
+      setDb(next);
+      const supabase = getSupabase();
+      if (userId && supabase && prev.meId === userId) {
+        saving.current = saving.current
+          .then(() => saveChanges(supabase, prev, next))
+          .then(() => setSaveError(""))
+          .catch((e: Error) => {
+            setSaveError(e.message);
+            reload();
+          });
+      }
+    },
+    [userId, setDb, reload],
+  );
 
-  const reset = useCallback(() => setDb(makeSampleDB()), []);
+  const reset = useCallback(() => {
+    if (!userId) setDb(makeSampleDB());
+  }, [userId, setDb]);
 
-  if (!db) {
+  if (loadError && !db) {
+    return (
+      <div className="px-6 pt-24 text-center">
+        <p className="font-serif text-xl font-semibold">Couldn&apos;t load your clubs</p>
+        <p className="mt-2 text-sm text-muted">{loadError}</p>
+        <button onClick={reload} className="mt-4 font-medium text-accent">
+          Try again
+        </button>
+      </div>
+    );
+  }
+  if (!db || (userId ? db.meId !== userId : isAccountId(db.meId))) {
     return <div className="min-h-dvh" />;
   }
-  return <StoreContext.Provider value={{ db, mutate, reset }}>{children}</StoreContext.Provider>;
+  return (
+    <StoreContext.Provider value={{ db, synced: Boolean(userId), mutate, reset, reload }}>
+      {saveError && (
+        <div role="alert" className="sticky top-0 z-30 bg-danger px-4 py-2 text-sm text-white">
+          That change didn&apos;t save: {saveError}. Showing the latest saved version.
+          <button onClick={() => setSaveError("")} className="ml-2 underline">
+            OK
+          </button>
+        </div>
+      )}
+      {children}
+    </StoreContext.Provider>
+  );
 }
 
 export function useStore() {

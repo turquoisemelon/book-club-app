@@ -8,10 +8,20 @@ About 20 minutes, done once. Until this is finished the app keeps working exactl
 2. Click **New project**. Name it `chapterclub`, set a database password (save it in your password manager; you won't need it day to day), and pick the region closest to you and your members.
 3. Wait a minute or two while it starts.
 
-## 2. Create the profiles table
+## 2. Create the database tables
+
+Run each file in [`supabase/migrations`](../supabase/migrations) once, in number order:
 
 1. In the left sidebar, open **SQL Editor**, then **New query**.
-2. Paste the whole of [`supabase/migrations/0001_profiles.sql`](../supabase/migrations/0001_profiles.sql) and click **Run**. It should say "Success. No rows returned".
+2. Paste the whole of the file and click **Run**. It should say "Success. No rows returned".
+3. Repeat with a new query for the next file.
+
+| File | What it adds |
+| --- | --- |
+| [`0001_profiles.sql`](../supabase/migrations/0001_profiles.sql) | Your name, for people who sign in |
+| [`0002_clubs.sql`](../supabase/migrations/0002_clubs.sql) | Clubs, members and books, with the privacy rules |
+
+When a new file appears here in a later update, run just that one. Running a file twice does no harm.
 
 ## 3. Tell Supabase where the app lives
 

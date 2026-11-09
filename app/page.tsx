@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { useStore } from "@/lib/store";
+import { BringOverClubs } from "@/components/bring-over";
 import { daysUntil } from "@/lib/format";
 import { AvatarStack, BookCover, ButtonLink, ClubImage, Card, Pill, SectionTitle, SparkleIcon, cx } from "@/components/ui";
 
 export default function Home() {
-  const { db, mutate, reset } = useStore();
+  const { db, synced, mutate, reset } = useStore();
   const myClubs = db.clubs.filter((c) => c.members.some((m) => m.userId === db.meId));
   const shelf = db.shelves[db.meId] ?? [];
   const me = db.users.find((u) => u.id === db.meId);
@@ -48,6 +49,8 @@ export default function Home() {
           </ButtonLink>
         </div>
       </section>
+
+      <BringOverClubs hideable />
 
       <SectionTitle>Your clubs</SectionTitle>
       <div className="space-y-3">
@@ -134,12 +137,16 @@ export default function Home() {
             ))}
           </div>
         </div>
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-muted">Everything is sample data, saved only on this phone.</span>
-          <button onClick={() => confirm("Reset all sample data?") && reset()} className="shrink-0 font-medium text-danger">
-            Reset
-          </button>
-        </div>
+        {synced ? (
+          <p className="text-muted">Your clubs are saved to your account, so they&apos;re the same on every device.</p>
+        ) : (
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-muted">Everything is sample data, saved only on this phone.</span>
+            <button onClick={() => confirm("Reset all sample data?") && reset()} className="shrink-0 font-medium text-danger">
+              Reset
+            </button>
+          </div>
+        )}
       </Card>
     </main>
   );

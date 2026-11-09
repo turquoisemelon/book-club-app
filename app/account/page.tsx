@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
+import { BringOverClubs } from "@/components/bring-over";
 import { Button, ButtonLink, Card, Field, TopBar, inputClass } from "@/components/ui";
 
 function NameForm({ initial, onSave }: { initial: string; onSave: (name: string) => Promise<string | null> }) {
@@ -57,11 +58,9 @@ export default function Account() {
               <p className="mt-1 font-medium">{user.email}</p>
             </Card>
             <Card>
-              <NameForm key={profile?.name ?? ""} initial={profile?.name ?? ""} onSave={saveName} />
+              <NameForm key={profile ? "loaded" : "loading"} initial={profile?.name ?? ""} onSave={saveName} />
             </Card>
-            <Card className="text-sm text-muted">
-              Your clubs still live on this device for now. Moving them into your account comes next.
-            </Card>
+            <BringOverClubs />
             <Button
               variant="secondary"
               className="w-full"
