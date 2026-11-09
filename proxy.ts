@@ -7,6 +7,22 @@ import { supabaseEnabled, supabaseKey, supabaseUrl } from "@/lib/supabase/config
 export async function proxy(request: NextRequest) {
   if (!supabaseEnabled) return NextResponse.next();
 
+  // When the link's return address isn't on Supabase's allowed list, Supabase
+  // sends people to the Site URL instead (usually the home page), with the
+  // one-time code or an error attached. Finish the sign-in from wherever that is.
+  const { pathname, searchParams } = request.nextUrl;
+  if (pathname !== "/auth/callback") {
+    if (searchParams.has("code")) {
+      const url = new URL("/auth/callback", request.url);
+      url.searchParams.set("code", searchParams.get("code")!);
+      url.searchParams.set("next", "/account");
+      return NextResponse.redirect(url);
+    }
+    if (searchParams.has("error_description") && pathname !== "/sign-in") {
+      return NextResponse.redirect(new URL("/sign-in?error=link", request.url));
+    }
+  }
+
   let response = NextResponse.next({ request });
   const supabase = createServerClient(supabaseUrl, supabaseKey, {
     cookies: {
