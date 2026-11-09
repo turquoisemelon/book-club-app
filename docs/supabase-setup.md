@@ -19,6 +19,7 @@ About 20 minutes, done once. Until this is finished the app keeps working exactl
 2. **Site URL**: `https://chapterclub.app`
 3. Under **Redirect URLs**, add:
    - `https://chapterclub.app/**`
+   - `https://www.chapterclub.app/**` (if the www address also works)
    - `http://localhost:3000/**` (only needed for running it on a laptop)
 4. Save.
 
@@ -27,7 +28,7 @@ About 20 minutes, done once. Until this is finished the app keeps working exactl
 1. In Supabase, click **Connect** at the top of the project (or **Project Settings → API Keys**). Copy:
    - the **Project URL** (looks like `https://abcd1234.supabase.co`)
    - the **publishable key** (starts with `sb_publishable_`; older projects call it the `anon` key)
-2. In Vercel, open the book-club-app project → **Settings → Environment Variables** and add both, for all environments:
+2. In Vercel, open the book-club-app project → **Settings → Environment Variables** and add both, as type **Config** (not Secret), for Production, Preview and Development. Vercel warns that `NEXT_PUBLIC_` values are visible in the browser; that's expected for these two.
    - `NEXT_PUBLIC_SUPABASE_URL` = the Project URL
    - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` = the publishable key
 3. **Redeploy**: Deployments → the latest one → ⋯ → Redeploy. The keys only take effect in a new build.
