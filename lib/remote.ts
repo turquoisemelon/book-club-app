@@ -223,7 +223,8 @@ export async function loadRemote(supabase: SupabaseClient, userId: string): Prom
 
   const ids = Array.from(new Set([userId, ...memberRows.map((m) => m.user_id)]));
   const [profilesRes, shelfRows] = await Promise.all([
-    supabase.from("profiles").select("id, name").in("id", ids),
+    // "*" so this keeps working before 0006_avatars.sql adds avatar_url.
+    supabase.from("profiles").select("*").in("id", ids),
     // Your shelves, plus clubmates' (the co-host's shortlist reads their want-to-read).
     fetchAll<ShelfRow>((from, to) =>
       supabase.from("shelf_entries").select("user_id, book_id, shelf, rating, added_at, read_at").in("user_id", ids).order("added_at", { ascending: false }).order("book_id").range(from, to),
@@ -232,8 +233,8 @@ export async function loadRemote(supabase: SupabaseClient, userId: string): Prom
   if (profilesRes.error) throw profilesRes.error;
 
   const users = new Map<string, User>();
-  for (const p of (profilesRes.data ?? []) as { id: string; name: string }[]) {
-    users.set(p.id, { id: p.id, name: p.name || "Reader", color: colorFor(p.id) });
+  for (const p of (profilesRes.data ?? []) as { id: string; name: string; avatar_url?: string | null }[]) {
+    users.set(p.id, { id: p.id, name: p.name || "Reader", color: colorFor(p.id), avatar: p.avatar_url ?? undefined });
   }
   if (!users.has(userId)) users.set(userId, { id: userId, name: "You", color: colorFor(userId) });
 

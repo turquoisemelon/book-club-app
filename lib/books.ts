@@ -102,6 +102,18 @@ export async function shrinkImage(file: File, maxHeight = 360): Promise<string> 
   return canvas.toDataURL("image/jpeg", 0.8);
 }
 
+// Crops a photo to a centred square and shrinks it to a small JPEG, for
+// profile pictures (about 10 KB).
+export async function shrinkSquare(file: File, size = 192): Promise<string> {
+  const bitmap = await createImageBitmap(file);
+  const side = Math.min(bitmap.width, bitmap.height);
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = Math.min(size, side);
+  canvas.getContext("2d")!.drawImage(bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side, 0, 0, canvas.width, canvas.height);
+  bitmap.close();
+  return canvas.toDataURL("image/jpeg", 0.85);
+}
+
 // Goodreads exports a CSV with quoted fields and ISBNs written as ="978...".
 export function parseCsv(text: string): string[][] {
   const rows: string[][] = [];

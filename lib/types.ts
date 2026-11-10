@@ -4,6 +4,8 @@ export type User = {
   id: string;
   name: string;
   color: string;
+  // Profile picture as a small data: URL. Falls back to the initial on `color`.
+  avatar?: string;
 };
 
 export type Book = {
