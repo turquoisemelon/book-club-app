@@ -6,7 +6,7 @@ import { useStore } from "@/lib/store";
 import { daysUntil } from "@/lib/format";
 import { Logo } from "@/components/brand";
 import { Landing } from "@/components/landing";
-import { ShelfBook } from "@/components/shelf";
+import { ShelfRow } from "@/components/shelf-row";
 import { SHELVES, shelfBooks } from "@/lib/shelves";
 import { Avatar, AvatarStack, ButtonLink, ClubImage, Card, Pill, SectionTitle, SparkleIcon } from "@/components/ui";
 
@@ -106,26 +106,9 @@ export default function Home() {
       {SHELVES.map(({ id, label }) => {
         const books = shelfBooks(db, db.meId, id);
         if (!books.length) return null;
-        const reading = id === "currently-reading";
-        return (
-          <section key={id} className="mb-4">
-            <Link href={`/books?shelf=${id}`} className="mb-2 flex items-baseline justify-between px-1">
-              <h3 className="font-serif text-lg font-semibold">{label}</h3>
-              <span className="text-sm text-muted">{books.length}</span>
-            </Link>
-            <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1">
-              {books.slice(0, 12).map(({ book, entry }) => (
-                <ShelfBook key={entry.bookId} book={book!} entry={entry} width={reading ? 96 : 76} />
-              ))}
-              {books.length > 12 && (
-                <Link href={`/books?shelf=${id}`} className="flex w-[76px] shrink-0 items-center justify-center rounded-md border border-dashed border-line text-center text-xs font-medium text-accent" style={{ height: 114 }}>
-                  {books.length - 12} more
-                </Link>
-              )}
-            </div>
-          </section>
-        );
+        return <ShelfRow key={id} id={id} label={label} books={books} collapsible={id !== "currently-reading"} />;
       })}
+      <div className="mt-2" />
       <Link href="/import" className="block">
         <Card className="flex items-center gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent-soft text-accent">
