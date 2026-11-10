@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Book Club",
-    short_name: "Book Club",
+    name: "Chapter Club",
+    short_name: "Chapter Club",
     description: "Run your book club with an AI co-host that does the busywork.",
     start_url: "/",
     display: "standalone",
