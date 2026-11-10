@@ -63,6 +63,9 @@ export default function Talk({ params }: { params: Promise<{ id: string }> }) {
                 onClick={() => {
                   const threadId = uid("t");
                   mutate((d) => actions.addThread(d, id, threadId, title.trim(), gate));
+                  // Close the form, or it's still open when you come back to Talk.
+                  setComposing(false);
+                  setTitle("");
                   router.push(`/clubs/${id}/talk/${threadId}`);
                 }}
               >
