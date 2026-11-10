@@ -6,10 +6,10 @@ import { useStore } from "@/lib/store";
 import { daysUntil } from "@/lib/format";
 import { Logo } from "@/components/brand";
 import { Landing } from "@/components/landing";
-import { AvatarStack, BookCover, ButtonLink, ClubImage, Card, Pill, SectionTitle, SparkleIcon, cx } from "@/components/ui";
+import { AvatarStack, BookCover, ButtonLink, ClubImage, Card, Pill, SectionTitle, SparkleIcon } from "@/components/ui";
 
 export default function Home() {
-  const { db, synced, mutate, reset } = useStore();
+  const { db } = useStore();
   const myClubs = db.clubs.filter((c) => c.members.some((m) => m.userId === db.meId));
   const shelf = db.shelves[db.meId] ?? [];
   const me = db.users.find((u) => u.id === db.meId);
@@ -118,34 +118,6 @@ export default function Home() {
           })}
         </div>
       )}
-
-      <SectionTitle>Prototype controls</SectionTitle>
-      <Card className="space-y-3 text-sm">
-        <div className="flex items-center justify-between gap-3">
-          <span>See the app as</span>
-          <div className="flex rounded-full border border-line bg-paper p-0.5">
-            {(["host", "member"] as const).map((v) => (
-              <button
-                key={v}
-                onClick={() => mutate((d) => void (d.viewAs = v))}
-                className={cx("rounded-full px-3 py-1 text-sm capitalize", db.viewAs === v ? "bg-accent text-white" : "text-muted")}
-              >
-                {v}
-              </button>
-            ))}
-          </div>
-        </div>
-        {synced ? (
-          <p className="text-muted">Your clubs are saved to your account, so they&apos;re the same on every device.</p>
-        ) : (
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-muted">Everything is sample data, saved only on this phone.</span>
-            <button onClick={() => confirm("Reset all sample data?") && reset()} className="shrink-0 font-medium text-danger">
-              Reset
-            </button>
-          </div>
-        )}
-      </Card>
     </main>
   );
 }

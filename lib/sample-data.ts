@@ -287,7 +287,6 @@ export function makeSampleDB(now = new Date()): DB {
   return {
     version: DB_VERSION,
     meId: "u-me",
-    viewAs: "host",
     users,
     books,
     clubs: [myClub, ...directory],

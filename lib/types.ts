@@ -124,7 +124,6 @@ export type ShelfEntry = {
 export type DB = {
   version: number;
   meId: string;
-  viewAs: Role;
   users: User[];
   books: Book[];
   clubs: Club[];
