@@ -16,7 +16,6 @@ export async function proxy(request: NextRequest) {
     if (searchParams.has("code")) {
       const url = new URL("/auth/callback", request.url);
       url.searchParams.set("code", searchParams.get("code")!);
-      url.searchParams.set("next", "/account");
       return NextResponse.redirect(url);
     }
     if (searchParams.has("error_description") && pathname !== "/sign-in") {
