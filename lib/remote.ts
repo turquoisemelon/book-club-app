@@ -6,6 +6,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Book, Club, DB, Membership, ShelfEntry, User } from "./types";
 import { DB_VERSION } from "./sample-data";
+import { validRating } from "./books";
 
 // Parts of a club stored together as JSON in clubs.content for now.
 type ClubContent = Pick<Club, "polls" | "meetups" | "threads" | "drafts" | "announcements" | "joinRequests" | "pastReads">;
@@ -111,7 +112,7 @@ const bookToRow = (b: Book): BookRow => ({
 const shelfFromRow = (r: ShelfRow): ShelfEntry => ({
   bookId: r.book_id,
   shelf: r.shelf,
-  rating: r.rating ?? undefined,
+  rating: r.rating == null ? undefined : Number(r.rating),
   addedAt: r.added_at,
   readAt: r.read_at ?? undefined,
 });
@@ -120,7 +121,7 @@ const shelfToRow = (userId: string, s: ShelfEntry) => ({
   user_id: userId,
   book_id: s.bookId,
   shelf: s.shelf,
-  rating: s.rating && Number.isInteger(s.rating) && s.rating >= 1 && s.rating <= 5 ? s.rating : null,
+  rating: validRating(s.rating) ?? null,
   ...(s.addedAt ? { added_at: s.addedAt } : {}),
   read_at: s.readAt ?? null,
 });

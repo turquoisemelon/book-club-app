@@ -22,6 +22,7 @@ Run each file in [`supabase/migrations`](../supabase/migrations) once, in number
 | [`0002_clubs.sql`](../supabase/migrations/0002_clubs.sql) | Clubs, members and books, with the privacy rules |
 | [`0003_invites.sql`](../supabase/migrations/0003_invites.sql) | Invite links: a secret code per club, and joining with it |
 | [`0004_shelves.sql`](../supabase/migrations/0004_shelves.sql) | Your bookshelves (Goodreads imports), saved to your account |
+| [`0005_fractional_ratings.sql`](../supabase/migrations/0005_fractional_ratings.sql) | Lets ratings like 2.25 be saved |
 
 When a new file appears here in a later update, run just that one. Running a file twice does no harm.
 
