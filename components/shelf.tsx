@@ -3,10 +3,17 @@ import { BookCover } from "./ui";
 
 export function Stars({ rating }: { rating?: number }) {
   if (!rating) return null;
+  // Fractional ratings (e.g. 2.25) fill the stars partway.
+  const pct = `${(rating / 5) * 100}%`;
   return (
-    <span className="text-[11px] tracking-tight text-accent" aria-label={`Rated ${rating} out of 5`}>
-      {"★".repeat(rating)}
-      <span className="text-line">{"★".repeat(5 - rating)}</span>
+    <span className="inline-flex items-center gap-1 text-[11px]" aria-label={`Rated ${rating} out of 5`}>
+      <span className="relative tracking-tight text-line">
+        ★★★★★
+        <span className="absolute inset-0 overflow-hidden whitespace-nowrap text-accent" style={{ width: pct }}>
+          ★★★★★
+        </span>
+      </span>
+      {!Number.isInteger(rating) && <span className="text-muted">{rating}</span>}
     </span>
   );
 }

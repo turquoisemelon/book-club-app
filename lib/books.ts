@@ -150,6 +150,11 @@ export type ImportRow = {
   matched: boolean;
 };
 
+// A rating above 0 and up to 5, kept to two decimals; otherwise undefined.
+export function validRating(n: number | undefined) {
+  return n !== undefined && Number.isFinite(n) && n > 0 && n <= 5 ? Math.round(n * 100) / 100 : undefined;
+}
+
 // Goodreads writes dates as 2024/03/02.
 function goodreadsDate(v: string) {
   const m = /^(\d{4})\/(\d{1,2})\/(\d{1,2})$/.exec(v);
@@ -178,8 +183,11 @@ export function parseGoodreads(text: string): ImportRow[] {
     const isbn = clean(r[iIsbn13]) || clean(r[iIsbn]);
     const shelfRaw = clean(r[iShelf]);
     const shelf = shelfRaw === "read" || shelfRaw === "currently-reading" ? shelfRaw : "to-read";
-    const rating = Number(clean(r[iRating])) || undefined;
-    const pages = Number(clean(r[iPages])) || undefined;
+    // Ratings can be fractional (e.g. 2.25); 0 means unrated. Anything outside
+    // 0 to 5 is dropped rather than failing the save.
+    const rating = validRating(Number(clean(r[iRating]).replace(",", ".")));
+    const pagesNum = Math.round(Number(clean(r[iPages])));
+    const pages = pagesNum > 0 && pagesNum < 100000 ? pagesNum : undefined;
     return {
       book: {
         // Goodreads' own id, so everyone importing the same book shares one record.
