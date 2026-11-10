@@ -10,6 +10,7 @@ export async function proxy(request: NextRequest) {
   // When the link's return address isn't on Supabase's allowed list, Supabase
   // sends people to the Site URL instead (usually the home page), with the
   // one-time code or an error attached. Finish the sign-in from wherever that is.
+  // (Invite links use ?invite=, not ?code=, so they don't collide with this.)
   const { pathname, searchParams } = request.nextUrl;
   if (pathname !== "/auth/callback") {
     if (searchParams.has("code")) {

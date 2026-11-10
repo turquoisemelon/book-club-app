@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Fraunces, Inter } from "next/font/google";
 import { AuthProvider } from "@/lib/auth";
+import { PendingInvite } from "@/components/pending-invite";
 import { StoreProvider } from "@/lib/store";
 import "./globals.css";
 
@@ -25,6 +26,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body>
         <div className="mx-auto min-h-dvh w-full max-w-md bg-paper shadow-[0_0_40px_rgba(0,0,0,0.06)]">
           <AuthProvider>
+            <PendingInvite />
             <StoreProvider>{children}</StoreProvider>
           </AuthProvider>
         </div>
