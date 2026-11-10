@@ -3,6 +3,7 @@
 import { use, useState } from "react";
 import { actions, useClub, useStore } from "@/lib/store";
 import { MeetupCard } from "@/components/meetup-card";
+import { STEPS } from "@/lib/progress";
 import { Button, Card, Field, SectionTitle, TopBar, inputClass } from "@/components/ui";
 
 function defaultDate() {
@@ -21,7 +22,7 @@ export default function Meetups({ params, searchParams }: { params: Promise<{ id
   const [time, setTime] = useState("19:00");
   const [place, setPlace] = useState("");
   const [videoLink, setVideoLink] = useState("");
-  const [upTo, setUpTo] = useState(book?.sections ?? 1);
+  const [upTo, setUpTo] = useState(100);
   if (!club) return null;
 
   const now = new Date();
@@ -62,10 +63,9 @@ export default function Meetups({ params, searchParams }: { params: Promise<{ id
             {book && (
               <Field label="Read up to">
                 <select value={upTo} onChange={(e) => setUpTo(Number(e.target.value))} className={inputClass}>
-                  {Array.from({ length: book.sections }, (_, i) => i + 1).map((n) => (
+                  {STEPS.map((n) => (
                     <option key={n} value={n}>
-                      {book.sectionLabel} {n}
-                      {n === book.sections ? " (the end)" : ""}
+                      {n === 100 ? "The whole book" : `${n}% of the book`}
                     </option>
                   ))}
                 </select>

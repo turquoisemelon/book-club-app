@@ -2,6 +2,7 @@
 
 import { actions, useStore } from "@/lib/store";
 import { daysUntil, formatDay, formatTime } from "@/lib/format";
+import { spanLabel } from "@/lib/progress";
 import type { Book, Club, Meetup, Rsvp } from "@/lib/types";
 import { AvatarStack, Card, Pill, cx } from "./ui";
 
@@ -58,7 +59,7 @@ export function MeetupCard({ club, meetup, book, compact }: { club: Club; meetup
           </p>
           {book && (
             <p className="mt-1 text-sm">
-              Read up to {book.sectionLabel.toLowerCase()} {meetup.upTo}
+              Read {spanLabel(meetup.upTo)}
             </p>
           )}
         </div>

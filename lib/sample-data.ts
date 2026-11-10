@@ -2,7 +2,7 @@ import type { Book, Club, DB, User } from "./types";
 import { questionsFor } from "./cohost";
 
 export const CITY = "your city";
-export const DB_VERSION = 4;
+export const DB_VERSION = 5;
 
 const users: User[] = [
   { id: "u-me", name: "Meltem", color: "#2f5d50" },
@@ -164,7 +164,7 @@ function directoryClub(
     members: memberIds.map((userId, i) => ({ userId, role: i === 0 ? "host" : "member", progress: 0 })),
     currentBookId: bookId,
     polls: [],
-    meetups: [{ id: `${id}-m1`, date: nextMeetup, place, upTo: 1, rsvps: {} }],
+    meetups: [{ id: `${id}-m1`, date: nextMeetup, place, upTo: 25, rsvps: {} }],
     threads: [],
     drafts: [],
     announcements: [],
@@ -185,10 +185,10 @@ export function makeSampleDB(now = new Date()): DB {
     openToMembers: false,
     sizeCap: 10,
     members: [
-      { userId: "u-me", role: "host", progress: 2 },
-      { userId: "u-priya", role: "member", progress: 3 },
-      { userId: "u-daniel", role: "member", progress: 1 },
-      { userId: "u-sofia", role: "member", progress: 2 },
+      { userId: "u-me", role: "host", progress: 25 },
+      { userId: "u-priya", role: "member", progress: 50 },
+      { userId: "u-daniel", role: "member", progress: 25 },
+      { userId: "u-sofia", role: "member", progress: 25 },
       { userId: "u-marcus", role: "member", progress: 0 },
     ],
     currentBookId: klara.id,
@@ -211,14 +211,14 @@ export function makeSampleDB(now = new Date()): DB {
         date: firstMeetup,
         place: "Priya's place",
         videoLink: "https://meet.google.com/",
-        upTo: 3,
+        upTo: 50,
         rsvps: { "u-me": "yes", "u-priya": "yes", "u-sofia": "maybe" },
       },
       {
         id: "m-2",
         date: daysFrom(now, 30),
         place: "The corner café",
-        upTo: 6,
+        upTo: 100,
         rsvps: {},
       },
     ],
@@ -237,7 +237,7 @@ export function makeSampleDB(now = new Date()): DB {
         id: "t-2",
         bookId: "b-klara",
         title: "Part Two: the move to Josie's house",
-        gate: 2,
+        gate: 25,
         posts: [
           { id: "po-3", userId: "u-sofia", text: "The Mother made me so uneasy in this part. Anyone else?", at: daysFrom(now, -2, 21) },
           { id: "po-4", userId: "u-me", text: "Yes! Every question she asks Klara feels like a test.", at: daysFrom(now, -2, 22) },
@@ -247,7 +247,7 @@ export function makeSampleDB(now = new Date()): DB {
         id: "t-3",
         bookId: "b-klara",
         title: "Part Three onwards",
-        gate: 3,
+        gate: 50,
         posts: [
           { id: "po-5", userId: "u-priya", text: "Okay, that trip into town. I have thoughts.", at: daysFrom(now, -1, 18) },
         ],
@@ -257,18 +257,18 @@ export function makeSampleDB(now = new Date()): DB {
       {
         id: "d-1",
         kind: "questions",
-        title: `Discussion questions for ${klara.sectionLabel}s 1 to 3`,
-        body: questionsFor(klara, 3),
+        title: "Discussion questions for the first half",
+        body: questionsFor(klara, 50),
         status: "pending",
         createdAt: daysFrom(now, 0, 8),
         meetupId: "m-1",
-        gate: 3,
+        gate: 50,
       },
     ],
     announcements: [
       {
         id: "a-1",
-        text: `Klara and the Sun won the poll! Let's read Parts 1 to 3 for our first meetup at Priya's place.`,
+        text: `Klara and the Sun won the poll! Let's read the first half for our first meetup at Priya's place.`,
         at: daysFrom(now, -11, 10),
         aiDrafted: true,
       },

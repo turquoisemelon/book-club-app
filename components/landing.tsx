@@ -56,7 +56,7 @@ export function Landing() {
       <section className="px-5 pt-12">
         <div className="grid grid-cols-2 gap-3">
           <Feature icon={<LockIcon />} title="Spoiler-safe talk">
-            Threads open chapter by chapter, so nobody ruins the ending.
+            Topics open as you read, so nobody ruins the ending.
           </Feature>
           <Feature icon={<PollIcon />} title="Book polls">
             Shortlist a few, everyone votes, done.
