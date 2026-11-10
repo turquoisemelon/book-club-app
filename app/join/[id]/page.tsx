@@ -3,22 +3,28 @@
 import { use, useState } from "react";
 import Link from "next/link";
 import { actions, useClub, useStore } from "@/lib/store";
+import { useAuth } from "@/lib/auth";
+import { InviteJoin } from "@/components/invite-join";
 import { daysUntil, formatDay } from "@/lib/format";
 import { AvatarStack, BookCover, Button, Card, inputClass } from "@/components/ui";
 
-export default function Join({ params }: { params: Promise<{ id: string }> }) {
+export default function Join({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ invite?: string }> }) {
   const { id } = use(params);
+  const { invite: code } = use(searchParams);
+  const auth = useAuth();
+  if (auth.enabled) return <InviteJoin clubId={id} code={code ?? ""} />;
+  return <PrototypeJoin id={id} />;
+}
+
+// Before accounts are switched on: the local prototype's join page.
+function PrototypeJoin({ id }: { id: string }) {
   const { club, book, db } = useClub(id);
-  const { mutate, synced } = useStore();
+  const { mutate } = useStore();
   const [name, setName] = useState("");
   const [joined, setJoined] = useState(false);
 
   if (!club) {
-    return (
-      <p className="p-8 text-center text-sm text-muted">
-        {synced ? "Joining private clubs with a link is coming in the next update." : "This invite link has expired or the club doesn't exist."}
-      </p>
-    );
+    return <p className="p-8 text-center text-sm text-muted">This invite link has expired or the club doesn&apos;t exist.</p>;
   }
 
   const host = db.users.find((u) => u.id === club.members.find((m) => m.role === "host")?.userId);
@@ -61,17 +67,6 @@ export default function Join({ params }: { params: Promise<{ id: string }> }) {
           <Link href={`/clubs/${id}`} className="mt-4 inline-block font-medium text-accent">
             Back to the club
           </Link>
-        </Card>
-      ) : synced && club.members.some((m) => m.userId === db.meId) ? (
-        <Card className="mt-6 text-center">
-          <p className="font-medium">You&apos;re already in this club.</p>
-          <Link href={`/clubs/${id}`} className="mt-3 inline-block font-medium text-accent">
-            Go to the club
-          </Link>
-        </Card>
-      ) : synced ? (
-        <Card className="mt-6 text-center text-sm text-muted">
-          Joining with a link is coming in the next update. For now, ask the host to add you.
         </Card>
       ) : (
         <form

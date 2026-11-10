@@ -20,6 +20,7 @@ Run each file in [`supabase/migrations`](../supabase/migrations) once, in number
 | --- | --- |
 | [`0001_profiles.sql`](../supabase/migrations/0001_profiles.sql) | Your name, for people who sign in |
 | [`0002_clubs.sql`](../supabase/migrations/0002_clubs.sql) | Clubs, members and books, with the privacy rules |
+| [`0003_invites.sql`](../supabase/migrations/0003_invites.sql) | Invite links: a secret code per club, and joining with it |
 
 When a new file appears here in a later update, run just that one. Running a file twice does no harm.
 
@@ -88,3 +89,17 @@ Supabase's built-in email only sends about 2 emails an hour, which runs out afte
 ### 6d. Try it
 
 Request a sign-in link at https://chapterclub.app/sign-in. The email should come from Chapter Club <hello@chapterclub.app>. If it doesn't arrive in a minute, check spam, then **Emails → Logs** in Resend.
+
+## 7. Make sign-in links work in any browser
+
+By default, Supabase's sign-in link only works in the same browser that asked for it. If the email opens in a different browser (the Mail app opening Safari when you asked in Chrome, or tapping the link on your phone after asking on your laptop), it says the link expired. Changing the email to link straight to the app fixes that.
+
+1. In Supabase, open **Authentication → Emails → Templates**.
+2. Open the **Magic link** template:
+   - **Subject:** `Your Chapter Club sign-in link`
+   - **Body:** replace everything with the contents of [`supabase/templates/sign-in.html`](../supabase/templates/sign-in.html)
+   - Save.
+3. Do the same for the **Confirm sign up** template, which is what brand-new people get the first time. Use the same subject and body.
+4. Request a new link and open it anywhere. You land on your account page, signed in, in whichever browser opened it.
+
+Each link works once and expires after an hour.

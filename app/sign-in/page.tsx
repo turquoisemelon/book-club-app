@@ -13,7 +13,7 @@ function SignInForm() {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState(params.get("error") === "link" ? "That sign-in link didn't work. It may have expired, or been opened in a different browser. Send a new one." : "");
+  const [error, setError] = useState(params.get("error") === "link" ? "That sign-in link didn't work. It may have expired or already been used. Send yourself a new one." : "");
 
   if (!enabled) {
     return (
@@ -40,7 +40,7 @@ function SignInForm() {
         <p className="text-2xl">📬</p>
         <p className="mt-1 font-serif text-xl font-semibold">Check your email</p>
         <p className="mt-1 text-sm text-muted">
-          We sent a sign-in link to {email}. Open it on this device, in this browser.
+          We sent a sign-in link to {email}. Open it on the device where you want to use the app.
         </p>
         <button onClick={() => setSent(false)} className="mt-4 text-sm font-medium text-accent">
           Use a different email
