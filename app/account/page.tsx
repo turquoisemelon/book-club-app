@@ -134,7 +134,6 @@ export default function Account() {
               />
               {saved?.kind === "updated" && <SavedNote onDone={clearSaved} />}
             </Card>
-            <Card className="text-sm text-muted">Your clubs still live on this device for now. Moving them into your account comes next.</Card>
             <Button
               variant="secondary"
               className="w-full"
