@@ -178,8 +178,12 @@ export function parseGoodreads(text: string): ImportRow[] {
     const isbn = clean(r[iIsbn13]) || clean(r[iIsbn]);
     const shelfRaw = clean(r[iShelf]);
     const shelf = shelfRaw === "read" || shelfRaw === "currently-reading" ? shelfRaw : "to-read";
-    const rating = Number(clean(r[iRating])) || undefined;
-    const pages = Number(clean(r[iPages])) || undefined;
+    // Only whole stars from 1 to 5 count as a rating (0 means unrated). Anything
+    // else means the row is malformed, so it's dropped rather than failing the save.
+    const ratingNum = Number(clean(r[iRating]));
+    const rating = Number.isInteger(ratingNum) && ratingNum >= 1 && ratingNum <= 5 ? ratingNum : undefined;
+    const pagesNum = Math.round(Number(clean(r[iPages])));
+    const pages = pagesNum > 0 && pagesNum < 100000 ? pagesNum : undefined;
     return {
       book: {
         // Goodreads' own id, so everyone importing the same book shares one record.

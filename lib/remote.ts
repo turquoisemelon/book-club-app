@@ -102,7 +102,7 @@ const bookToRow = (b: Book): BookRow => ({
   isbn: b.isbn ?? null,
   cover_id: b.coverId ?? null,
   cover: b.cover ?? null,
-  pages: b.pages ?? null,
+  pages: b.pages ? Math.round(b.pages) : null,
   sections: b.sections,
   section_label: b.sectionLabel,
   blurb: b.blurb ?? null,
@@ -120,7 +120,7 @@ const shelfToRow = (userId: string, s: ShelfEntry) => ({
   user_id: userId,
   book_id: s.bookId,
   shelf: s.shelf,
-  rating: s.rating && s.rating >= 1 && s.rating <= 5 ? s.rating : null,
+  rating: s.rating && Number.isInteger(s.rating) && s.rating >= 1 && s.rating <= 5 ? s.rating : null,
   ...(s.addedAt ? { added_at: s.addedAt } : {}),
   read_at: s.readAt ?? null,
 });
