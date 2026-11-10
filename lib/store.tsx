@@ -19,7 +19,6 @@ type Store = {
   // True when data is saved to your account rather than only on this device.
   synced: boolean;
   mutate: (fn: (draft: DB) => void) => void;
-  reset: () => void;
   reload: () => void;
 };
 
@@ -123,10 +122,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     [userId, setDb, reload],
   );
 
-  const reset = useCallback(() => {
-    if (!userId) setDb(makeSampleDB());
-  }, [userId, setDb]);
-
   if (loadError && !db) {
     return (
       <div className="px-6 pt-24 text-center">
@@ -142,7 +137,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     return <div className="min-h-dvh" />;
   }
   return (
-    <StoreContext.Provider value={{ db, synced: Boolean(userId), mutate, reset, reload }}>
+    <StoreContext.Provider value={{ db, synced: Boolean(userId), mutate, reload }}>
       {saveError && (
         <div role="alert" className="sticky top-0 z-30 bg-danger px-4 py-2 text-sm text-white">
           That change didn&apos;t save: {saveError}. Showing the latest saved version.
@@ -167,7 +162,7 @@ export function useClub(id: string) {
   const club = db.clubs.find((c) => c.id === id);
   const book = club?.currentBookId ? db.books.find((b) => b.id === club.currentBookId) : undefined;
   const me = club?.members.find((m) => m.userId === db.meId);
-  const isHost = me?.role === "host" && db.viewAs === "host";
+  const isHost = me?.role === "host";
   return { club, book, me, isHost, db };
 }
 
@@ -210,7 +205,6 @@ export const actions = {
       announcements: [],
       joinRequests: [],
     });
-    db.viewAs = "host";
   },
 
   joinClub(db: DB, clubId: string, name: string) {
@@ -226,6 +220,12 @@ export const actions = {
 
   setOpen(db: DB, clubId: string, open: boolean) {
     clubIn(db, clubId).openToMembers = open;
+  },
+
+  setDetails(db: DB, clubId: string, input: { name: string; description: string }) {
+    const club = clubIn(db, clubId);
+    if (input.name.trim()) club.name = input.name.trim();
+    if (input.description.trim()) club.description = input.description.trim();
   },
 
   vote(db: DB, clubId: string, pollId: string, bookId: string) {

@@ -37,8 +37,8 @@ type ClubRow = {
 
 type MemberRow = { club_id: string; user_id: string; role: "host" | "member"; progress: number };
 
-// Settings people keep per device: shelves, join requests, host/member view.
-type LocalPrefs = Pick<DB, "viewAs" | "shelves" | "requested">;
+// Settings people keep per device: shelves and join requests.
+type LocalPrefs = Pick<DB, "shelves" | "requested">;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const isAccountId = (id: string) => UUID.test(id);
@@ -57,14 +57,17 @@ function prefsKey(userId: string) {
 function loadPrefs(userId: string): LocalPrefs {
   try {
     const raw = localStorage.getItem(prefsKey(userId));
-    if (raw) return { viewAs: "host", shelves: {}, requested: [], ...JSON.parse(raw) };
+    if (raw) {
+      const saved = JSON.parse(raw) as Partial<LocalPrefs>;
+      return { shelves: saved.shelves ?? {}, requested: saved.requested ?? [] };
+    }
   } catch {}
-  return { viewAs: "host", shelves: {}, requested: [] };
+  return { shelves: {}, requested: [] };
 }
 
 export function savePrefs(db: DB) {
   try {
-    const prefs: LocalPrefs = { viewAs: db.viewAs, shelves: db.shelves, requested: db.requested };
+    const prefs: LocalPrefs = { shelves: db.shelves, requested: db.requested };
     localStorage.setItem(prefsKey(db.meId), JSON.stringify(prefs));
   } catch {}
 }

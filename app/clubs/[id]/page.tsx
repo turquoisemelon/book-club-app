@@ -8,6 +8,7 @@ import { MeetupCard } from "@/components/meetup-card";
 import { ProgressPicker } from "@/components/progress-picker";
 import { PastReads } from "@/components/past-reads";
 import { DeleteClub } from "@/components/delete-club";
+import { ClubDetails } from "@/components/club-details";
 import { CoverSheet } from "@/components/cover-picker";
 import { CurrentReadForm } from "@/components/current-read-form";
 import { AiLabel, Avatar, BookCover, Button, ButtonLink, Card, SectionTitle, SparkleIcon, Toggle, TopBar } from "@/components/ui";
@@ -39,9 +40,7 @@ export default function ClubHome({ params }: { params: Promise<{ id: string }> }
         }
       />
       <main className="px-4">
-        <p className="mt-3 px-1 text-sm text-muted">
-          {club.description} · {club.cadence}
-        </p>
+        <ClubDetails club={club} isHost={isHost} />
 
         {isHost && pending > 0 && (
           <Link href={`/clubs/${id}/cohost`} className="mt-4 flex items-center gap-3 rounded-2xl bg-ai-soft p-4 text-ai active:opacity-80">
