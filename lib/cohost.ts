@@ -3,18 +3,20 @@
 // that gets the same inputs.
 import type { Book, Club, Meetup, User } from "./types";
 import { formatDay, formatTime } from "./format";
+import { spanLabel } from "./progress";
 
+// upTo: how far into the book (in %) a question is spoiler-safe.
 const KLARA_QUESTIONS: { upTo: number; text: string }[] = [
-  { upTo: 1, text: "Klara learns about people by watching them through the store window. What did her way of seeing show you about the humans around her?" },
-  { upTo: 1, text: "Why do you think Josie chooses Klara over a newer model?" },
-  { upTo: 2, text: "How did your feelings about the Mother change once Klara moved into the house?" },
-  { upTo: 3, text: "Klara treats the Sun almost like a god. Did her faith read as naive, moving, or both?" },
-  { upTo: 3, text: "Rick and Josie's friendship is shaped by who is 'lifted' and who is not. What does the book seem to say about that divide?" },
-  { upTo: 6, text: "By the end, what do you think Ishiguro is saying about what makes a person irreplaceable?" },
+  { upTo: 25, text: "Klara learns about people by watching them through the store window. What did her way of seeing show you about the humans around her?" },
+  { upTo: 25, text: "Why do you think Josie chooses Klara over a newer model?" },
+  { upTo: 50, text: "How did your feelings about the Mother change once Klara moved into the house?" },
+  { upTo: 50, text: "Klara treats the Sun almost like a god. Did her faith read as naive, moving, or both?" },
+  { upTo: 50, text: "Rick and Josie's friendship is shaped by who is 'lifted' and who is not. What does the book seem to say about that divide?" },
+  { upTo: 100, text: "By the end, what do you think Ishiguro is saying about what makes a person irreplaceable?" },
 ];
 
 export function questionsFor(book: Book, upTo: number): string {
-  const label = `${book.sectionLabel.toLowerCase()}${upTo > 1 ? "s" : ""} 1${upTo > 1 ? ` to ${upTo}` : ""}`;
+  const label = spanLabel(upTo);
   const specific = book.id === "b-klara" ? KLARA_QUESTIONS.filter((q) => q.upTo <= upTo).map((q) => q.text) : [];
   const generic = [
     `Which moment in ${label} has stayed with you most, and why?`,
@@ -37,7 +39,7 @@ export function reminderFor(club: Club, meetup: Meetup, book: Book | undefined, 
     .map(([id]) => users.find((u) => u.id === id)?.name)
     .filter(Boolean);
   const unanswered = club.members.filter((m) => !meetup.rsvps[m.userId]).length;
-  const reading = book ? ` We're discussing ${book.title}, ${book.sectionLabel.toLowerCase()}s 1 to ${meetup.upTo}.` : "";
+  const reading = book ? ` We're discussing ${spanLabel(meetup.upTo)} of ${book.title}.` : "";
   const lines = [
     `Reminder: we meet ${formatDay(meetup.date)} at ${formatTime(meetup.date)}, ${meetup.place}.${reading}`,
   ];
@@ -78,13 +80,8 @@ export function shortlistFor(club: Club, shelves: Record<string, { bookId: strin
 export function scheduleFor(book: Book, meetups: Meetup[]): string {
   const upcoming = meetups.slice(0, 2);
   if (upcoming.length === 0) return `${book.title} won the poll! Next step: pick a meetup date.`;
-  const half = Math.ceil(book.sections / 2);
-  const parts = upcoming.length === 1 ? [book.sections] : [half, book.sections];
-  const label = book.sectionLabel.toLowerCase();
-  const lines = upcoming.map((m, i) => {
-    const from = i === 0 ? 1 : parts[0] + 1;
-    return `• ${formatDay(m.date)}: ${label}s ${from} to ${parts[i]}`;
-  });
+  const parts = upcoming.length === 1 ? ["the whole book"] : ["the first half", "the second half"];
+  const lines = upcoming.map((m, i) => `• ${formatDay(m.date)}: ${parts[i]}`);
   return [`${book.title} won the poll! Here's a reading plan:`, "", ...lines].join("\n");
 }
 

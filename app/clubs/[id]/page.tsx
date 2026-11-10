@@ -87,7 +87,7 @@ export default function ClubHome({ params }: { params: Promise<{ id: string }> }
             </div>
             {me && (
               <div className="mt-4 border-t border-line pt-4">
-                <ProgressPicker clubId={id} book={book} progress={me.progress} />
+                <ProgressPicker clubId={id} progress={me.progress} />
               </div>
             )}
           </Card>
