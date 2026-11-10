@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
-import type { Book, Club, DB, Draft, Rsvp } from "./types";
+import type { Book, Club, DB, Draft, Rsvp, ShelfEntry } from "./types";
 import { DB_VERSION, makeSampleDB } from "./sample-data";
 import { questionsFor, recapFor, reminderFor, scheduleFor, shortlistFor } from "./cohost";
 import { uid } from "./format";
@@ -374,19 +374,17 @@ export const actions = {
     db.requested = db.requested.filter((id) => id !== clubId);
   },
 
-  importShelf(db: DB, entries: { book: Book; shelf: "read" | "to-read" | "currently-reading"; rating?: number }[]) {
+  importShelf(db: DB, entries: { book: Book; shelf: ShelfEntry["shelf"]; rating?: number; addedAt?: string; readAt?: string }[]) {
     const shelf = db.shelves[db.meId] ?? [];
+    const now = new Date().toISOString();
     for (const e of entries) {
       const known = db.books.find((b) => b.id === e.book.id || (e.book.isbn && b.isbn === e.book.isbn));
       const bookId = known?.id ?? e.book.id;
       if (!known) db.books.push(e.book);
       const existing = shelf.find((s) => s.bookId === bookId);
-      if (existing) {
-        existing.shelf = e.shelf;
-        existing.rating = e.rating;
-      } else {
-        shelf.push({ bookId, shelf: e.shelf, rating: e.rating });
-      }
+      const update = { shelf: e.shelf, rating: e.rating, addedAt: e.addedAt ?? existing?.addedAt ?? now, readAt: e.readAt };
+      if (existing) Object.assign(existing, update);
+      else shelf.push({ bookId, ...update });
     }
     db.shelves[db.meId] = shelf;
   },

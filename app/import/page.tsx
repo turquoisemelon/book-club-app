@@ -3,13 +3,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { actions, useStore } from "@/lib/store";
+import { shelfLabel } from "@/lib/shelves";
 import { parseGoodreads, SAMPLE_GOODREADS_CSV, type ImportRow } from "@/lib/books";
 import { BookCover, Button, Card, Pill, TopBar } from "@/components/ui";
 
-const shelfLabel = { read: "Read", "to-read": "Want to read", "currently-reading": "Reading" };
 
 export default function Import() {
-  const { mutate } = useStore();
+  const { mutate, synced } = useStore();
   const router = useRouter();
   const [rows, setRows] = useState<ImportRow[] | null>(null);
   const [error, setError] = useState("");
@@ -29,7 +29,7 @@ export default function Import() {
   return (
     <>
       <TopBar title="Goodreads import" back="/" />
-      <main className="px-4 pb-10 pt-4">
+      <main className="px-4 pb-4 pt-4">
         {!rows ? (
           <>
             <ol className="space-y-3 px-1 text-[15px] leading-relaxed">
@@ -40,7 +40,7 @@ export default function Import() {
                 <span className="font-semibold">2.</span> Download the CSV file it gives you.
               </li>
               <li>
-                <span className="font-semibold">3.</span> Upload it here. It&apos;s read on your phone and never stored on our servers.
+                <span className="font-semibold">3.</span> Choose it here. We read the file on your phone and keep only your book list: titles, shelves and ratings, never your reviews or notes.
               </li>
             </ol>
             <label className="mt-6 flex h-12 cursor-pointer items-center justify-center rounded-full bg-accent text-[15px] font-medium text-white">
@@ -79,23 +79,27 @@ export default function Import() {
                     <p className="truncate font-medium">{r.book.title}</p>
                     <p className="truncate text-sm text-muted">{r.book.author}</p>
                   </div>
-                  {r.matched ? <Pill>{shelfLabel[r.shelf]}</Pill> : <Pill tone="ai">No ISBN</Pill>}
+                  {r.matched ? <Pill>{shelfLabel(r.shelf)}</Pill> : <Pill tone="ai">No ISBN</Pill>}
                 </div>
               ))}
             </div>
             {unmatched.length > 0 && <p className="mt-3 px-1 text-xs text-muted">Books without an ISBN get added too. In the real app you&apos;ll be able to pick the right edition for each.</p>}
-            <Button
-              className="mt-5 w-full"
-              onClick={() => {
-                mutate((d) => actions.importShelf(d, rows));
-                router.push("/");
-              }}
-            >
-              Add {rows.length} books to my shelves
-            </Button>
-            <Button variant="ghost" className="mt-2 w-full" onClick={() => setRows(null)}>
-              Start over
-            </Button>
+            {/* Pinned to the bottom, so a long library doesn't hide the button that saves it. */}
+            <div className="sticky bottom-0 -mx-4 mt-5 border-t border-line/70 bg-paper/95 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur">
+              <Button
+                className="w-full"
+                onClick={() => {
+                  mutate((d) => actions.importShelf(d, rows));
+                  router.push("/");
+                }}
+              >
+                Add {rows.length} books to my shelves
+              </Button>
+              <p className="mt-1.5 text-center text-xs text-muted">{synced ? "Saved to your account, so they show on any device." : "Saved on this device. Sign in to keep them on every device."}</p>
+              <Button variant="ghost" className="mt-1 w-full" onClick={() => setRows(null)}>
+                Start over
+              </Button>
+            </div>
           </>
         )}
       </main>
