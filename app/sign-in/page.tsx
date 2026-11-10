@@ -55,7 +55,7 @@ function SignInForm() {
     setError("");
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=/account` },
+      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
     });
     setBusy(false);
     if (error) setError(error.message);
