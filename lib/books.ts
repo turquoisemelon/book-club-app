@@ -145,13 +145,22 @@ export type ImportRow = {
   book: Book;
   shelf: "read" | "to-read" | "currently-reading";
   rating?: number;
+  addedAt?: string;
+  readAt?: string;
   matched: boolean;
 };
+
+// Goodreads writes dates as 2024/03/02.
+function goodreadsDate(v: string) {
+  const m = /^(\d{4})\/(\d{1,2})\/(\d{1,2})$/.exec(v);
+  return m ? `${m[1]}-${m[2].padStart(2, "0")}-${m[3].padStart(2, "0")}` : undefined;
+}
 
 export function parseGoodreads(text: string): ImportRow[] {
   const [header, ...rows] = parseCsv(text);
   if (!header) return [];
-  const col = (name: string) => header.findIndex((h) => h.trim().toLowerCase() === name.toLowerCase());
+  // Some spreadsheet apps save a byte-order mark before the first column name.
+  const col = (name: string) => header.findIndex((h) => h.replace(/^\uFEFF/, "").trim().toLowerCase() === name.toLowerCase());
   const iTitle = col("Title");
   const iAuthor = col("Author");
   const iIsbn13 = col("ISBN13");
@@ -160,6 +169,8 @@ export function parseGoodreads(text: string): ImportRow[] {
   const iRating = col("My Rating");
   const iPages = col("Number of Pages");
   const iId = col("Book Id");
+  const iAdded = col("Date Added");
+  const iRead = col("Date Read");
   if (iTitle < 0 || iAuthor < 0) throw new Error("This doesn't look like a Goodreads export: no Title or Author column.");
 
   const clean = (v: string | undefined) => (v ?? "").replace(/^="?|"$/g, "").trim();
@@ -171,7 +182,8 @@ export function parseGoodreads(text: string): ImportRow[] {
     const pages = Number(clean(r[iPages])) || undefined;
     return {
       book: {
-        id: `gr-${clean(r[iId]) || n}`,
+        // Goodreads' own id, so everyone importing the same book shares one record.
+        id: clean(r[iId]) ? `gr-${clean(r[iId])}` : `gr-x-${(isbn || `${clean(r[iTitle])}-${clean(r[iAuthor])}`).toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 80) || n}`,
         title: clean(r[iTitle]).replace(/\s*\(.*?#\d+\)$/, ""),
         author: clean(r[iAuthor]),
         isbn: isbn || undefined,
@@ -181,6 +193,8 @@ export function parseGoodreads(text: string): ImportRow[] {
       },
       shelf,
       rating,
+      addedAt: goodreadsDate(clean(r[iAdded])),
+      readAt: goodreadsDate(clean(r[iRead])),
       matched: Boolean(isbn),
     };
   });

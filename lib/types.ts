@@ -119,6 +119,9 @@ export type ShelfEntry = {
   bookId: string;
   shelf: "read" | "to-read" | "currently-reading";
   rating?: number;
+  // ISO dates. Optional so shelves saved before these existed keep loading.
+  addedAt?: string;
+  readAt?: string;
 };
 
 export type DB = {

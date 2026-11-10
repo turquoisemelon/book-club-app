@@ -6,7 +6,9 @@ import { useStore } from "@/lib/store";
 import { daysUntil } from "@/lib/format";
 import { Logo } from "@/components/brand";
 import { Landing } from "@/components/landing";
-import { AvatarStack, BookCover, ButtonLink, ClubImage, Card, Pill, SectionTitle, SparkleIcon } from "@/components/ui";
+import { ShelfBook } from "@/components/shelf";
+import { SHELVES, shelfBooks } from "@/lib/shelves";
+import { AvatarStack, ButtonLink, ClubImage, Card, Pill, SectionTitle, SparkleIcon } from "@/components/ui";
 
 export default function Home() {
   const { db } = useStore();
@@ -89,7 +91,40 @@ export default function Home() {
         )}
       </div>
 
-      <SectionTitle>Your books</SectionTitle>
+      <SectionTitle
+        action={
+          shelf.length > 0 && (
+            <Link href="/books" className="text-sm font-medium text-accent">
+              See all {shelf.length}
+            </Link>
+          )
+        }
+      >
+        Your books
+      </SectionTitle>
+      {SHELVES.map(({ id, label }) => {
+        const books = shelfBooks(db, db.meId, id);
+        if (!books.length) return null;
+        const reading = id === "currently-reading";
+        return (
+          <section key={id} className="mb-4">
+            <Link href={`/books?shelf=${id}`} className="mb-2 flex items-baseline justify-between px-1">
+              <h3 className="font-serif text-lg font-semibold">{label}</h3>
+              <span className="text-sm text-muted">{books.length}</span>
+            </Link>
+            <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1">
+              {books.slice(0, 12).map(({ book, entry }) => (
+                <ShelfBook key={entry.bookId} book={book!} entry={entry} width={reading ? 96 : 76} />
+              ))}
+              {books.length > 12 && (
+                <Link href={`/books?shelf=${id}`} className="flex w-[76px] shrink-0 items-center justify-center rounded-md border border-dashed border-line text-center text-xs font-medium text-accent" style={{ height: 114 }}>
+                  {books.length - 12} more
+                </Link>
+              )}
+            </div>
+          </section>
+        );
+      })}
       <Link href="/import" className="block">
         <Card className="flex items-center gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent-soft text-accent">
@@ -98,26 +133,13 @@ export default function Home() {
             </svg>
           </div>
           <div className="flex-1">
-            <p className="font-medium">Bring your Goodreads books</p>
+            <p className="font-medium">{shelf.length ? "Import from Goodreads again" : "Bring your Goodreads books"}</p>
             <p className="text-sm text-muted">
-              {shelf.length ? `${shelf.length} books on your shelves. Import again to add more.` : "Your co-host uses them to suggest what to read next."}
+              {shelf.length ? "Adds new books and updates shelves you've changed." : "Your co-host uses them to suggest what to read next."}
             </p>
           </div>
         </Card>
       </Link>
-      {shelf.length > 0 && (
-        <div className="-mx-4 mt-3 flex gap-3 overflow-x-auto px-4 pb-1">
-          {shelf.map((s) => {
-            const book = db.books.find((b) => b.id === s.bookId);
-            return (
-              <div key={s.bookId} className="w-[72px] shrink-0">
-                <BookCover book={book} width={72} />
-                <p className="mt-1 text-[10px] uppercase tracking-wide text-muted">{s.shelf === "to-read" ? "Want to read" : s.shelf === "read" ? "Read" : "Reading"}</p>
-              </div>
-            );
-          })}
-        </div>
-      )}
     </main>
   );
 }

@@ -139,6 +139,7 @@ export function BookCover({ book, width = 64 }: { book?: Book; width?: number })
       alt={`Cover of ${book.title}`}
       width={width}
       height={height}
+      loading="lazy"
       onError={() => setFailedUrl(url)}
       className="shrink-0 rounded-md bg-line object-cover shadow-sm"
       style={{ width, height }}

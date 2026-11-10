@@ -2,9 +2,9 @@
 //
 // The screens keep working on the same in-memory DB shape as the local
 // prototype. After each change, `saveChanges` compares the DB before and after
-// and writes only what changed: books, club rows, and member rows.
+// and writes only what changed: books, club rows, member rows, and your shelves.
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Book, Club, DB, Membership, User } from "./types";
+import type { Book, Club, DB, Membership, ShelfEntry, User } from "./types";
 import { DB_VERSION } from "./sample-data";
 
 // Parts of a club stored together as JSON in clubs.content for now.
@@ -37,8 +37,18 @@ type ClubRow = {
 
 type MemberRow = { club_id: string; user_id: string; role: "host" | "member"; progress: number };
 
-// Settings people keep per device: shelves and join requests.
-type LocalPrefs = Pick<DB, "shelves" | "requested">;
+type ShelfRow = {
+  user_id: string;
+  book_id: string;
+  shelf: ShelfEntry["shelf"];
+  rating: number | null;
+  added_at: string;
+  read_at: string | null;
+};
+
+// Settings people keep per device: directory join requests. (Shelves used to
+// live here too; `legacyShelf` picks up any saved before they moved.)
+type LocalPrefs = Pick<DB, "requested"> & { shelves?: DB["shelves"] };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const isAccountId = (id: string) => UUID.test(id);
@@ -59,15 +69,15 @@ function loadPrefs(userId: string): LocalPrefs {
     const raw = localStorage.getItem(prefsKey(userId));
     if (raw) {
       const saved = JSON.parse(raw) as Partial<LocalPrefs>;
-      return { shelves: saved.shelves ?? {}, requested: saved.requested ?? [] };
+      return { shelves: saved.shelves, requested: saved.requested ?? [] };
     }
   } catch {}
-  return { shelves: {}, requested: [] };
+  return { requested: [] };
 }
 
 export function savePrefs(db: DB) {
   try {
-    const prefs: LocalPrefs = { shelves: db.shelves, requested: db.requested };
+    const prefs: LocalPrefs = { requested: db.requested };
     localStorage.setItem(prefsKey(db.meId), JSON.stringify(prefs));
   } catch {}
 }
@@ -97,6 +107,52 @@ const bookToRow = (b: Book): BookRow => ({
   section_label: b.sectionLabel,
   blurb: b.blurb ?? null,
 });
+
+const shelfFromRow = (r: ShelfRow): ShelfEntry => ({
+  bookId: r.book_id,
+  shelf: r.shelf,
+  rating: r.rating ?? undefined,
+  addedAt: r.added_at,
+  readAt: r.read_at ?? undefined,
+});
+
+const shelfToRow = (userId: string, s: ShelfEntry) => ({
+  user_id: userId,
+  book_id: s.bookId,
+  shelf: s.shelf,
+  rating: s.rating && s.rating >= 1 && s.rating <= 5 ? s.rating : null,
+  ...(s.addedAt ? { added_at: s.addedAt } : {}),
+  read_at: s.readAt ?? null,
+});
+
+// Every book a club points at, so only those (plus shelf books) get loaded.
+function bookIdsIn(club: Club): string[] {
+  return [
+    club.currentBookId,
+    ...(club.pastReads ?? []).map((p) => p.bookId),
+    ...club.polls.flatMap((p) => [p.winnerBookId, ...p.options.map((o) => o.bookId)]),
+    ...club.drafts.flatMap((d) => d.bookIds ?? []),
+    ...club.threads.map((t) => t.bookId),
+  ].filter((id): id is string => Boolean(id));
+}
+
+// Supabase returns at most 1,000 rows per request; a Goodreads library can be bigger.
+const PAGE = 1000;
+async function fetchAll<T>(page: (from: number, to: number) => PromiseLike<{ data: unknown[] | null; error: { message: string } | null }>): Promise<T[]> {
+  const out: T[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await page(from, from + PAGE - 1);
+    if (error) throw new Error(error.message);
+    out.push(...((data ?? []) as T[]));
+    if (!data || data.length < PAGE) return out;
+  }
+}
+
+function chunks<T>(list: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < list.length; i += size) out.push(list.slice(i, i + size));
+  return out;
+}
 
 function clubFromRow(r: ClubRow, members: Membership[]): Club {
   const c = r.content ?? {};
@@ -152,12 +208,11 @@ export class ConflictError extends Error {}
 
 export async function loadRemote(supabase: SupabaseClient, userId: string): Promise<DB> {
   // Privacy rules return only clubs you're in, plus clubs open to new members.
-  const [clubsRes, booksRes] = await Promise.all([
-    supabase.from("clubs").select("id, name, description, neighbourhood, cadence, open_to_members, size_cap, current_book_id, content, updated_at").order("created_at", { ascending: false }),
-    supabase.from("books").select("id, title, author, isbn, cover_id, cover, pages, sections, section_label, blurb"),
-  ]);
+  const clubsRes = await supabase
+    .from("clubs")
+    .select("id, name, description, neighbourhood, cadence, open_to_members, size_cap, current_book_id, content, updated_at")
+    .order("created_at", { ascending: false });
   if (clubsRes.error) throw clubsRes.error;
-  if (booksRes.error) throw booksRes.error;
   const clubRows = (clubsRes.data ?? []) as (ClubRow & { updated_at: string })[];
 
   const membersRes = clubRows.length
@@ -167,7 +222,13 @@ export async function loadRemote(supabase: SupabaseClient, userId: string): Prom
   const memberRows = (membersRes.data ?? []) as MemberRow[];
 
   const ids = Array.from(new Set([userId, ...memberRows.map((m) => m.user_id)]));
-  const profilesRes = await supabase.from("profiles").select("id, name").in("id", ids);
+  const [profilesRes, shelfRows] = await Promise.all([
+    supabase.from("profiles").select("id, name").in("id", ids),
+    // Your shelves, plus clubmates' (the co-host's shortlist reads their want-to-read).
+    fetchAll<ShelfRow>((from, to) =>
+      supabase.from("shelf_entries").select("user_id, book_id, shelf, rating, added_at, read_at").in("user_id", ids).order("added_at", { ascending: false }).order("book_id").range(from, to),
+    ),
+  ]);
   if (profilesRes.error) throw profilesRes.error;
 
   const users = new Map<string, User>();
@@ -188,12 +249,40 @@ export async function loadRemote(supabase: SupabaseClient, userId: string): Prom
     ),
   );
 
+  const shelves: DB["shelves"] = {};
+  for (const r of shelfRows) (shelves[r.user_id] ??= []).push(shelfFromRow(r));
+
+  const prefs = loadPrefs(userId);
+  const legacy = shelves[userId]?.length ? [] : (prefs.shelves?.[userId] ?? []);
+
+  // Only the books something here points at. The catalogue grows with every
+  // Goodreads import, so loading all of it would get slow.
+  const wanted = new Set([...clubs.flatMap(bookIdsIn), ...shelfRows.map((r) => r.book_id), ...legacy.map((s) => s.bookId)]);
+  const books: Book[] = [];
+  for (const part of chunks(Array.from(wanted), 150)) {
+    const res = await supabase.from("books").select("id, title, author, isbn, cover_id, cover, pages, sections, section_label, blurb").in("id", part);
+    if (res.error) throw res.error;
+    books.push(...((res.data ?? []) as BookRow[]).map(bookFromRow));
+  }
+
+  // Shelves saved on this device before they moved to your account: copy them
+  // over once (only books that made it into the catalogue), then forget them.
+  if (legacy.length) {
+    const known = new Set(books.map((b) => b.id));
+    const keep = legacy.filter((s) => known.has(s.bookId));
+    for (const part of chunks(keep, 500)) {
+      await check(supabase.from("shelf_entries").upsert(part.map((s) => shelfToRow(userId, s)), { onConflict: "user_id,book_id", ignoreDuplicates: true }));
+    }
+    if (keep.length) shelves[userId] = keep;
+  }
+
   return {
     version: DB_VERSION,
     meId: userId,
-    ...loadPrefs(userId),
+    requested: prefs.requested,
+    shelves,
     users: Array.from(users.values()),
-    books: ((booksRes.data ?? []) as BookRow[]).map(bookFromRow),
+    books,
     clubs,
   };
 }
@@ -209,9 +298,27 @@ async function check<T extends { error: { message: string } | null }>(p: Promise
 // Writes the difference between two versions of the DB to Supabase.
 export async function saveChanges(supabase: SupabaseClient, prev: DB, next: DB) {
   // 1. Books first, since clubs point at them.
+  // Only books something points at are loaded, so a "new" book may already be
+  // in the shared catalogue (say, someone else imported it from Goodreads):
+  // add it without overwriting the cover they picked.
   const prevBooks = new Map(prev.books.map((b) => [b.id, b]));
-  const changedBooks = next.books.filter((b) => !same(prevBooks.get(b.id), b));
-  if (changedBooks.length) await check(supabase.from("books").upsert(changedBooks.map(bookToRow)));
+  const newBooks = next.books.filter((b) => !prevBooks.has(b.id));
+  const changedBooks = next.books.filter((b) => prevBooks.has(b.id) && !same(prevBooks.get(b.id), b));
+  for (const part of chunks(newBooks, 500)) await check(supabase.from("books").upsert(part.map(bookToRow), { ignoreDuplicates: true }));
+  for (const part of chunks(changedBooks, 500)) await check(supabase.from("books").upsert(part.map(bookToRow)));
+
+  // Your shelves. Other people's are read-only here.
+  const prevShelf = new Map((prev.shelves[prev.meId] ?? []).map((s) => [s.bookId, s]));
+  const nextShelf = next.shelves[next.meId] ?? [];
+  const changedShelf = nextShelf.filter((s) => !same(prevShelf.get(s.bookId), s));
+  for (const part of chunks(changedShelf, 500)) {
+    await check(supabase.from("shelf_entries").upsert(part.map((s) => shelfToRow(next.meId, s)), { onConflict: "user_id,book_id" }));
+  }
+  const kept = new Set(nextShelf.map((s) => s.bookId));
+  const removed = Array.from(prevShelf.keys()).filter((id) => !kept.has(id));
+  for (const part of chunks(removed, 150)) {
+    await check(supabase.from("shelf_entries").delete().eq("user_id", next.meId).in("book_id", part));
+  }
 
   // 2. Clubs: deleted, new, changed.
   const prevClubs = new Map(prev.clubs.map((c) => [c.id, c]));
