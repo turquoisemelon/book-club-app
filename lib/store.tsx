@@ -222,8 +222,10 @@ export const actions = {
     clubIn(db, clubId).openToMembers = open;
   },
 
-  setDescription(db: DB, clubId: string, description: string) {
-    clubIn(db, clubId).description = description.trim();
+  setDetails(db: DB, clubId: string, input: { name: string; description: string }) {
+    const club = clubIn(db, clubId);
+    if (input.name.trim()) club.name = input.name.trim();
+    if (input.description.trim()) club.description = input.description.trim();
   },
 
   vote(db: DB, clubId: string, pollId: string, bookId: string) {
