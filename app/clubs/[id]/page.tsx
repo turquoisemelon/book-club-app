@@ -7,6 +7,7 @@ import { timeAgo } from "@/lib/format";
 import { MeetupCard } from "@/components/meetup-card";
 import { ProgressPicker } from "@/components/progress-picker";
 import { PastReads } from "@/components/past-reads";
+import { PopularInClub } from "@/components/popular-in-club";
 import { DeleteClub } from "@/components/delete-club";
 import { ClubDetails } from "@/components/club-details";
 import { CoverSheet } from "@/components/cover-picker";
@@ -158,6 +159,8 @@ export default function ClubHome({ params }: { params: Promise<{ id: string }> }
             </div>
           </>
         )}
+
+        <PopularInClub club={club} isHost={isHost} />
 
         <PastReads club={club} isHost={isHost} />
 
