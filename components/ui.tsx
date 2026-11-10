@@ -78,20 +78,6 @@ export function SectionTitle({ children, action }: { children: React.ReactNode; 
 }
 
 export function Avatar({ user, size = 32 }: { user?: User; size?: number }) {
-  if (user?.avatar) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={user.avatar}
-        alt={user.name}
-        title={user.name}
-        width={size}
-        height={size}
-        className="inline-block shrink-0 rounded-full object-cover ring-2 ring-paper"
-        style={{ width: size, height: size }}
-      />
-    );
-  }
   return (
     <span
       className="inline-flex shrink-0 items-center justify-center rounded-full font-semibold text-white ring-2 ring-paper"

@@ -1,74 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
-import { shrinkSquare } from "@/lib/books";
-import { colorFor } from "@/lib/remote";
-import { useStore } from "@/lib/store";
-import { Avatar, Button, ButtonLink, Card, Field, TopBar, inputClass } from "@/components/ui";
-
-function PictureForm() {
-  const { user, profile, saveAvatar } = useAuth();
-  const { reload } = useStore();
-  const fileRef = useRef<HTMLInputElement>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  if (!user) return null;
-  const avatar = profile?.avatar_url ?? undefined;
-
-  async function save(next: string | null) {
-    setBusy(true);
-    setError("");
-    const err = await saveAvatar(next);
-    setBusy(false);
-    if (err) setError(`Couldn't save your picture. ${err}`);
-    // Refresh clubs so your new avatar shows everywhere straight away.
-    else reload();
-  }
-
-  return (
-    <div className="flex items-center gap-4">
-      <Avatar user={{ id: user.id, name: profile?.name || user.email || "?", color: colorFor(user.id), avatar }} size={72} />
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium">Profile picture</p>
-        <p className="text-xs text-muted">Shows next to your name in your clubs.</p>
-        <div className="mt-2 flex flex-wrap gap-2">
-          <Button type="button" size="sm" variant="secondary" disabled={busy} onClick={() => fileRef.current?.click()}>
-            {busy ? "Saving…" : avatar ? "Change" : "Add a photo"}
-          </Button>
-          {avatar && (
-            <Button type="button" size="sm" variant="ghost" disabled={busy} onClick={() => save(null)}>
-              Remove
-            </Button>
-          )}
-        </div>
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={async (e) => {
-            const file = e.target.files?.[0];
-            e.target.value = "";
-            if (!file) return;
-            try {
-              await save(await shrinkSquare(file));
-            } catch {
-              setBusy(false);
-              setError("Couldn't read that image. Try a JPEG or PNG.");
-            }
-          }}
-        />
-        {error && (
-          <p aria-live="polite" className="mt-2 text-sm text-danger">
-            {error}
-          </p>
-        )}
-      </div>
-    </div>
-  );
-}
+import { Button, ButtonLink, Card, Field, TopBar, inputClass } from "@/components/ui";
 
 function NameForm({ initial, onSave, onSaved }: { initial: string; onSave: (name: string) => Promise<string | null>; onSaved: (name: string) => void }) {
   const [name, setName] = useState(initial);
@@ -181,9 +116,6 @@ export default function Account() {
           </Card>
         ) : (
           <>
-            <Card>
-              <PictureForm />
-            </Card>
             <Card>
               <p className="text-xs font-semibold uppercase tracking-wide text-muted">Signed in as</p>
               <p className="mt-1 font-medium">{user.email}</p>

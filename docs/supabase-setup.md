@@ -23,8 +23,7 @@ Run each file in [`supabase/migrations`](../supabase/migrations) once, in number
 | [`0003_invites.sql`](../supabase/migrations/0003_invites.sql) | Invite links: a secret code per club, and joining with it |
 | [`0004_shelves.sql`](../supabase/migrations/0004_shelves.sql) | Your bookshelves (Goodreads imports), saved to your account |
 | [`0005_fractional_ratings.sql`](../supabase/migrations/0005_fractional_ratings.sql) | Lets ratings like 2.25 be saved |
-| [`0006_avatars.sql`](../supabase/migrations/0006_avatars.sql) | Profile pictures |
-| [`0007_progress_percent.sql`](../supabase/migrations/0007_progress_percent.sql) | Reading progress in quarters of the book (25/50/75/100%) instead of chapters. Run after the app update that uses quarters is live. |
+| [`0006_progress_percent.sql`](../supabase/migrations/0006_progress_percent.sql) | Reading progress in quarters of the book (25/50/75/100%) instead of chapters. Run after the app update that uses quarters is live. |
 
 When a new file appears here in a later update, run just that one. Running a file twice does no harm.
 

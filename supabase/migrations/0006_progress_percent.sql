@@ -1,4 +1,4 @@
--- Step 8: reading progress moves from chapters to quarters of the book.
+-- Step 6: reading progress moves from chapters to quarters of the book.
 -- Progress, spoiler gates on talk topics, and "read up to" on meetups were
 -- chapter (or part) numbers; they become percentages: 0, 25, 50, 75 or 100.
 --
@@ -17,7 +17,7 @@ alter table public.applied_migrations enable row level security;
 
 do $$
 begin
-  if exists (select 1 from public.applied_migrations where name = '0007_progress_percent') then
+  if exists (select 1 from public.applied_migrations where name = '0006_progress_percent') then
     return;
   end if;
 
@@ -68,6 +68,6 @@ begin
   ), '[]'::jsonb))
   where jsonb_typeof(c.content->'drafts') = 'array';
 
-  insert into public.applied_migrations (name) values ('0007_progress_percent');
+  insert into public.applied_migrations (name) values ('0006_progress_percent');
 end;
 $$;

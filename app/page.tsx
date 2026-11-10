@@ -8,7 +8,7 @@ import { Logo } from "@/components/brand";
 import { Landing } from "@/components/landing";
 import { ShelfBook } from "@/components/shelf";
 import { SHELVES, shelfBooks } from "@/lib/shelves";
-import { Avatar, AvatarStack, ButtonLink, ClubImage, Card, Pill, SectionTitle, SparkleIcon } from "@/components/ui";
+import { AvatarStack, ButtonLink, ClubImage, Card, Pill, SectionTitle, SparkleIcon } from "@/components/ui";
 
 export default function Home() {
   const { db } = useStore();
@@ -27,9 +27,8 @@ export default function Home() {
         {!auth.enabled ? (
           <span className="text-sm text-muted">Hi, {me?.name}</span>
         ) : auth.loading ? null : auth.user ? (
-          <Link href="/account" className="flex items-center gap-2 text-sm text-muted">
+          <Link href="/account" className="text-sm text-muted">
             Hi, {auth.profile?.name || me?.name}
-            {me && <Avatar user={{ ...me, avatar: auth.profile ? (auth.profile.avatar_url ?? undefined) : me.avatar }} size={28} />}
           </Link>
         ) : (
           <Link href="/sign-in" className="text-sm font-medium text-accent">
