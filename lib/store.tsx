@@ -380,6 +380,28 @@ export const actions = {
     club.pastReads = [...(club.pastReads ?? []), { id: uid("pr"), bookId, metAt: input.metAt }].sort((a, b) => b.metAt.localeCompare(a.metAt));
   },
 
+  // Fixes a past read: a typo in the title, the wrong author, the cover or the
+  // meeting date. A new title or author points it at that book (found or
+  // added) instead of renaming a book other clubs and shelves may share.
+  updatePastRead(db: DB, clubId: string, pastReadId: string, input: { title: string; author: string; metAt: string; cover?: string }) {
+    const club = clubIn(db, clubId);
+    const read = (club.pastReads ?? []).find((p) => p.id === pastReadId);
+    if (!read) return;
+    const title = input.title.trim();
+    const author = input.author.trim();
+    const current = db.books.find((b) => b.id === read.bookId);
+    if (current && current.title.toLowerCase() === title.toLowerCase() && current.author.toLowerCase() === author.toLowerCase()) {
+      current.title = title;
+      current.author = author;
+    } else {
+      read.bookId = findOrAddBook(db, title, author, undefined, 1);
+    }
+    const book = db.books.find((b) => b.id === read.bookId);
+    if (book) book.cover = input.cover;
+    read.metAt = input.metAt;
+    club.pastReads = [...(club.pastReads ?? [])].sort((a, b) => b.metAt.localeCompare(a.metAt));
+  },
+
   // Sets what the club is reading without running a poll.
   setCurrentRead(db: DB, clubId: string, input: { title: string; author: string; cover?: string }) {
     const club = clubIn(db, clubId);
