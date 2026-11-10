@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import type { Book, Club, DB, Draft, Rsvp, ShelfEntry } from "./types";
 import { DB_VERSION, makeSampleDB } from "./sample-data";
 import { questionsFor, recapFor, reminderFor, scheduleFor, shortlistFor } from "./cohost";
+import { spanLabel } from "./progress";
 import { uid } from "./format";
 import { useAuth } from "./auth";
 import { getSupabase } from "./supabase/client";
@@ -263,9 +264,8 @@ export const actions = {
     for (const m of club.members) m.progress = 0;
     const book = db.books.find((b) => b.id === winner.bookId)!;
     const upcoming = club.meetups.filter((m) => new Date(m.date) > new Date());
-    const half = Math.ceil(book.sections / 2);
     upcoming.slice(0, 2).forEach((m, i, list) => {
-      m.upTo = list.length === 1 || i === 1 ? book.sections : half;
+      m.upTo = list.length === 1 || i === 1 ? 100 : 50;
     });
     addDraft(club, { kind: "schedule", title: `Reading plan for ${book.title}`, body: scheduleFor(book, upcoming) });
   },
@@ -301,8 +301,8 @@ export const actions = {
     const book = db.books.find((b) => b.id === club.currentBookId);
     const next = club.meetups.find((m) => new Date(m.date) > new Date());
     if (kind === "questions" && book) {
-      const upTo = next?.upTo ?? book.sections;
-      addDraft(club, { kind, title: `Discussion questions for ${book.sectionLabel.toLowerCase()}s 1 to ${upTo}`, body: questionsFor(book, upTo), gate: upTo, meetupId: next?.id });
+      const upTo = next?.upTo ?? 100;
+      addDraft(club, { kind, title: `Discussion questions for ${spanLabel(upTo)}`, body: questionsFor(book, upTo), gate: upTo, meetupId: next?.id });
     }
     if (kind === "reminder" && next) {
       addDraft(club, { kind, title: "Meetup reminder", body: reminderFor(club, next, book, db.users), meetupId: next.id });

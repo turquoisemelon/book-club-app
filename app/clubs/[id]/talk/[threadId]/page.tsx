@@ -4,6 +4,7 @@ import { use, useState } from "react";
 import { actions, useClub, useStore } from "@/lib/store";
 import { timeAgo } from "@/lib/format";
 import { ProgressPicker } from "@/components/progress-picker";
+import { spanLabel } from "@/lib/progress";
 import { AiLabel, Avatar, Button, Card, TopBar, inputClass } from "@/components/ui";
 
 export default function ThreadPage({ params }: { params: Promise<{ id: string; threadId: string }> }) {
@@ -14,7 +15,6 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string; t
   const thread = club?.threads.find((t) => t.id === threadId);
   if (!club || !thread) return null;
 
-  const label = book?.sectionLabel.toLowerCase() ?? "chapter";
   const locked = thread.gate > (me?.progress ?? 0);
 
   if (locked) {
@@ -24,12 +24,12 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string; t
         <main className="px-4 pt-10 text-center">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#fbe9e6] text-3xl">🔒</div>
           <h2 className="mt-4 font-serif text-xl font-semibold">
-            This topic covers up to {label} {thread.gate}
+            This topic covers {spanLabel(thread.gate)}
           </h2>
           <p className="mt-2 text-sm text-muted">Mark your progress once you get there and it opens up. No peeking.</p>
           {book && me && (
             <Card className="mt-6 text-left">
-              <ProgressPicker clubId={id} book={book} progress={me.progress} />
+              <ProgressPicker clubId={id} progress={me.progress} />
             </Card>
           )}
         </main>
@@ -43,7 +43,7 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string; t
       <main className="space-y-3 px-4 pb-40 pt-4">
         {thread.gate > 0 && (
           <p className="px-1 text-xs text-muted">
-            Spoilers up to {label} {thread.gate}
+            Spoilers for {spanLabel(thread.gate)}
           </p>
         )}
         {thread.posts.map((p) => {

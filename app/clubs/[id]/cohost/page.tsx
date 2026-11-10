@@ -4,6 +4,7 @@ import { use, useState } from "react";
 import { actions, useClub, useStore } from "@/lib/store";
 import { timeAgo } from "@/lib/format";
 import type { Draft, DraftKind } from "@/lib/types";
+import { spanLabel } from "@/lib/progress";
 import { Button, Card, Pill, SectionTitle, SparkleIcon, TopBar, cx, inputClass } from "@/components/ui";
 
 const destination: Record<DraftKind, string> = {
@@ -14,7 +15,7 @@ const destination: Record<DraftKind, string> = {
   recap: "Posts as an announcement",
 };
 
-function DraftCard({ clubId, draft, sectionLabel }: { clubId: string; draft: Draft; sectionLabel: string }) {
+function DraftCard({ clubId, draft }: { clubId: string; draft: Draft }) {
   const { mutate } = useStore();
   const [editing, setEditing] = useState(false);
   const [body, setBody] = useState(draft.body);
@@ -26,7 +27,7 @@ function DraftCard({ clubId, draft, sectionLabel }: { clubId: string; draft: Dra
           <p className="font-semibold">{draft.title}</p>
           <p className="text-xs text-muted">
             {timeAgo(draft.createdAt)} · {destination[draft.kind]}
-            {draft.kind === "questions" && draft.gate ? `, unlocked at ${sectionLabel} ${draft.gate}` : ""}
+            {draft.kind === "questions" && draft.gate ? `, unlocked at ${draft.gate}% read` : ""}
           </p>
         </div>
         <Pill tone="ai">Draft</Pill>
@@ -72,10 +73,9 @@ export default function Cohost({ params }: { params: Promise<{ id: string }> }) 
   const pending = club.drafts.filter((d) => d.status === "pending");
   const history = club.drafts.filter((d) => d.status !== "pending").slice(0, 6);
   const next = club.meetups.find((m) => new Date(m.date) > new Date());
-  const label = book?.sectionLabel.toLowerCase() ?? "chapter";
 
   const asks: { kind: DraftKind; title: string; detail: string; disabled?: string }[] = [
-    { kind: "questions", title: "Discussion questions", detail: next && book ? `For ${label}s 1 to ${next.upTo}, spoiler-safe` : "For your current book", disabled: book ? undefined : "Pick a book first" },
+    { kind: "questions", title: "Discussion questions", detail: next && book ? `For ${spanLabel(next.upTo)}, spoiler-safe` : "For your current book", disabled: book ? undefined : "Pick a book first" },
     { kind: "reminder", title: "Meetup reminder", detail: "With who's coming and the reading", disabled: next ? undefined : "Schedule a meetup first" },
     { kind: "shortlist", title: "Next book shortlist", detail: "From members' want-to-read shelves" },
     { kind: "recap", title: "Meetup recap", detail: "From your rough notes" },
@@ -95,7 +95,7 @@ export default function Cohost({ params }: { params: Promise<{ id: string }> }) 
         <SectionTitle>Waiting for you{pending.length ? ` · ${pending.length}` : ""}</SectionTitle>
         <div className="space-y-3">
           {pending.map((d) => (
-            <DraftCard key={d.id} clubId={id} draft={d} sectionLabel={label} />
+            <DraftCard key={d.id} clubId={id} draft={d} />
           ))}
           {pending.length === 0 && <Card className="text-center text-sm text-muted">All caught up. Ask for something below.</Card>}
         </div>

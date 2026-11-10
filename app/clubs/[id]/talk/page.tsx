@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { actions, useClub, useStore } from "@/lib/store";
 import { timeAgo, uid } from "@/lib/format";
 import { ProgressPicker } from "@/components/progress-picker";
+import { STEPS, gateLabel, snapDown, spanLabel } from "@/lib/progress";
 import { Button, Card, Field, Pill, SectionTitle, TopBar, inputClass } from "@/components/ui";
 
 export default function Talk({ params }: { params: Promise<{ id: string }> }) {
@@ -15,11 +16,10 @@ export default function Talk({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const [composing, setComposing] = useState(false);
   const [title, setTitle] = useState("");
-  const [gate, setGate] = useState(me?.progress ?? 0);
+  const [gate, setGate] = useState(snapDown(me?.progress ?? 0));
   if (!club) return null;
 
   const progress = me?.progress ?? 0;
-  const label = book?.sectionLabel ?? "Chapter";
   const threads = club.threads.filter((t) => !t.bookId || t.bookId === club.currentBookId).sort((a, b) => a.gate - b.gate);
 
   return (
@@ -28,7 +28,7 @@ export default function Talk({ params }: { params: Promise<{ id: string }> }) {
       <main className="px-4">
         {book && me && (
           <Card className="mt-4">
-            <ProgressPicker clubId={id} book={book} progress={progress} />
+            <ProgressPicker clubId={id} progress={progress} />
           </Card>
         )}
 
@@ -45,9 +45,9 @@ export default function Talk({ params }: { params: Promise<{ id: string }> }) {
               <Field label="Contains spoilers up to" hint="Only members who have read this far will see it.">
                 <select value={gate} onChange={(e) => setGate(Number(e.target.value))} className={inputClass}>
                   <option value={0}>No spoilers</option>
-                  {Array.from({ length: book.sections }, (_, i) => i + 1).map((n) => (
+                  {STEPS.map((n) => (
                     <option key={n} value={n}>
-                      {label} {n}
+                      {gateLabel(n)}
                     </option>
                   ))}
                 </select>
@@ -80,12 +80,12 @@ export default function Talk({ params }: { params: Promise<{ id: string }> }) {
               <Link key={t.id} href={`/clubs/${id}/talk/${t.id}`} className="block">
                 <Card className={locked ? "bg-paper" : ""}>
                   <div className="flex items-start justify-between gap-2">
-                    <p className={locked ? "font-medium text-muted" : "font-medium"}>{locked ? `Spoilers for ${label.toLowerCase()} ${t.gate}` : t.title}</p>
-                    {locked ? <Pill tone="warn">Locked</Pill> : t.gate > 0 ? <Pill>{`${label} ${t.gate}`}</Pill> : <Pill tone="accent">Spoiler-free</Pill>}
+                    <p className={locked ? "font-medium text-muted" : "font-medium"}>{locked ? `Spoilers for ${spanLabel(t.gate)}` : t.title}</p>
+                    {locked ? <Pill tone="warn">Locked</Pill> : t.gate > 0 ? <Pill>{gateLabel(t.gate)}</Pill> : <Pill tone="accent">Spoiler-free</Pill>}
                   </div>
                   <p className="mt-1 text-sm text-muted">
                     {locked
-                      ? `Opens when you've read up to ${label.toLowerCase()} ${t.gate}`
+                      ? `Opens when you've read ${spanLabel(t.gate)}`
                       : last
                         ? `${t.posts.length} message${t.posts.length > 1 ? "s" : ""} · ${timeAgo(last.at)}`
                         : "No messages yet"}
