@@ -9,9 +9,9 @@ const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
 const fraunces = Fraunces({ variable: "--font-fraunces", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Book Club",
+  title: "Chapter Club",
   description: "Run your book club with an AI co-host that does the busywork.",
-  appleWebApp: { capable: true, title: "Book Club", statusBarStyle: "default" },
+  appleWebApp: { capable: true, title: "Chapter Club", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {

@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { useStore } from "@/lib/store";
 import { daysUntil } from "@/lib/format";
+import { Logo } from "@/components/brand";
+import { Landing } from "@/components/landing";
 import { AvatarStack, BookCover, ButtonLink, ClubImage, Card, Pill, SectionTitle, SparkleIcon, cx } from "@/components/ui";
 
 export default function Home() {
@@ -13,14 +15,13 @@ export default function Home() {
   const me = db.users.find((u) => u.id === db.meId);
   const auth = useAuth();
 
+  // Signed-out visitors get the front door, not someone else's sample clubs.
+  if (auth.enabled && !auth.loading && !auth.user) return <Landing />;
+
   return (
     <main className="px-4 pb-10">
       <header className="flex items-center justify-between pb-2 pt-6">
-        <div className="flex items-center gap-2">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/icon.svg" alt="" width={32} height={32} className="rounded-lg" />
-          <span className="font-serif text-xl font-semibold">Book Club</span>
-        </div>
+        <Logo />
         {!auth.enabled ? (
           <span className="text-sm text-muted">Hi, {me?.name}</span>
         ) : auth.loading ? null : auth.user ? (

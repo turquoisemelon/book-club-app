@@ -18,7 +18,7 @@ function icsFor(club: Club, meetup: Meetup, book?: Book) {
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//Book Club//EN",
+    "PRODID:-//Chapter Club//EN",
     "BEGIN:VEVENT",
     `UID:${meetup.id}@bookclub`,
     `DTSTAMP:${fmt(new Date())}`,

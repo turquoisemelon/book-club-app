@@ -54,6 +54,16 @@ export function rememberInvite(path: string) {
     localStorage.setItem(PENDING, JSON.stringify({ path, at: Date.now() }));
   } catch {}
 }
+export function hasPendingInvite(): boolean {
+  try {
+    const raw = localStorage.getItem(PENDING);
+    if (!raw) return false;
+    const { path, at } = JSON.parse(raw) as { path: string; at: number };
+    return Date.now() - at <= 86400000 && path.startsWith("/join/");
+  } catch {
+    return false;
+  }
+}
 export function takePendingInvite(): string | null {
   try {
     const raw = localStorage.getItem(PENDING);

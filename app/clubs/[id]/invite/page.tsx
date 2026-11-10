@@ -42,7 +42,7 @@ export default function Invite({ params }: { params: Promise<{ id: string }> }) 
   }
 
   const link = synced && code ? inviteLink(origin, id, code) : `${origin}/join/${id}`;
-  const message = `Join ${club.name} on Book Club${book ? `, we're reading ${book.title}` : ""}: ${link}`;
+  const message = `Join ${club.name} on Chapter Club${book ? `, we're reading ${book.title}` : ""}: ${link}`;
 
   return (
     <>
