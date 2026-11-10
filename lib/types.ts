@@ -66,6 +66,9 @@ export type Thread = {
   bookId?: string;
   title: string;
   gate: number;
+  // Who started the topic. Missing on topics made before this was tracked;
+  // only the host can delete those.
+  createdBy?: string;
   posts: Post[];
 };
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
-import type { Book, Club, DB, Draft, Rsvp, ShelfEntry } from "./types";
+import type { Book, Club, DB, Draft, Post, Rsvp, ShelfEntry, Thread } from "./types";
 import { DB_VERSION, makeSampleDB } from "./sample-data";
 import { questionsFor, recapFor, reminderFor, scheduleFor, shortlistFor } from "./cohost";
 import { spanLabel } from "./progress";
@@ -167,6 +167,18 @@ export function useClub(id: string) {
   return { club, book, me, isHost, db };
 }
 
+function isHostOf(club: Club, userId: string) {
+  return club.members.some((m) => m.userId === userId && m.role === "host");
+}
+
+export function canDeleteThread(club: Club, thread: Thread, userId: string) {
+  return isHostOf(club, userId) || (!!thread.createdBy && thread.createdBy === userId);
+}
+
+export function canDeletePost(club: Club, post: Post, userId: string) {
+  return isHostOf(club, userId) || post.userId === userId;
+}
+
 function clubIn(db: DB, id: string): Club {
   const club = db.clubs.find((c) => c.id === id);
   if (!club) throw new Error(`No club ${id}`);
@@ -288,7 +300,24 @@ export const actions = {
 
   addThread(db: DB, clubId: string, id: string, title: string, gate: number) {
     const club = clubIn(db, clubId);
-    club.threads.push({ id, bookId: club.currentBookId, title, gate, posts: [] });
+    club.threads.push({ id, bookId: club.currentBookId, title, gate, createdBy: db.meId, posts: [] });
+  },
+
+  // The host can delete any topic; anyone else only the topics they started.
+  deleteThread(db: DB, clubId: string, threadId: string) {
+    const club = clubIn(db, clubId);
+    const thread = club.threads.find((t) => t.id === threadId);
+    if (!thread || !canDeleteThread(club, thread, db.meId)) return;
+    club.threads = club.threads.filter((t) => t.id !== threadId);
+  },
+
+  // The host can delete any message; anyone else only their own.
+  deletePost(db: DB, clubId: string, threadId: string, postId: string) {
+    const club = clubIn(db, clubId);
+    const thread = club.threads.find((t) => t.id === threadId);
+    const post = thread?.posts.find((p) => p.id === postId);
+    if (!thread || !post || !canDeletePost(club, post, db.meId)) return;
+    thread.posts = thread.posts.filter((p) => p.id !== postId);
   },
 
   addPost(db: DB, clubId: string, threadId: string, text: string) {
@@ -329,6 +358,7 @@ export const actions = {
         bookId: club.currentBookId,
         title: draft.title,
         gate: draft.gate ?? 0,
+        createdBy: db.meId,
         posts: [{ id: uid("po"), userId: db.meId, text: body, at, aiDrafted: true }],
       });
     } else if (draft.kind === "shortlist" && draft.bookIds?.length) {

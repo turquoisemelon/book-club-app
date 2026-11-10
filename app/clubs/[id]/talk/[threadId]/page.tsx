@@ -1,7 +1,8 @@
 "use client";
 
 import { use, useState } from "react";
-import { actions, useClub, useStore } from "@/lib/store";
+import { useRouter } from "next/navigation";
+import { actions, canDeletePost, canDeleteThread, useClub, useStore } from "@/lib/store";
 import { timeAgo } from "@/lib/format";
 import { ProgressPicker } from "@/components/progress-picker";
 import { spanLabel } from "@/lib/progress";
@@ -11,16 +12,49 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string; t
   const { id, threadId } = use(params);
   const { club, book, me, db } = useClub(id);
   const { mutate } = useStore();
+  const router = useRouter();
   const [text, setText] = useState("");
+  const [confirmingTopic, setConfirmingTopic] = useState(false);
+  const [confirmingPost, setConfirmingPost] = useState<string | null>(null);
   const thread = club?.threads.find((t) => t.id === threadId);
   if (!club || !thread) return null;
 
   const locked = thread.gate > (me?.progress ?? 0);
+  const canDeleteTopic = canDeleteThread(club, thread, db.meId);
+
+  function deleteTopic() {
+    router.replace(`/clubs/${id}/talk`);
+    mutate((d) => actions.deleteThread(d, id, threadId));
+  }
+
+  const deleteTopicButton = canDeleteTopic ? (
+    <button onClick={() => setConfirmingTopic(true)} className="px-2 text-sm font-medium text-danger">
+      Delete
+    </button>
+  ) : undefined;
+
+  const confirmTopicCard = confirmingTopic && (
+    <Card className="space-y-3">
+      <h2 className="font-serif text-lg font-semibold text-danger">Delete this topic?</h2>
+      <p className="text-sm text-muted">
+        This removes the topic and {thread.posts.length === 1 ? "its 1 message" : `all ${thread.posts.length} messages`} for everyone in the club. You can&apos;t undo this.
+      </p>
+      <div className="flex gap-2">
+        <Button variant="secondary" className="flex-1" onClick={() => setConfirmingTopic(false)}>
+          Cancel
+        </Button>
+        <Button variant="danger" className="flex-1" onClick={deleteTopic}>
+          Delete topic
+        </Button>
+      </div>
+    </Card>
+  );
 
   if (locked) {
     return (
       <>
-        <TopBar title="Spoilers ahead" back={`/clubs/${id}/talk`} />
+        <TopBar title="Spoilers ahead" back={`/clubs/${id}/talk`} right={deleteTopicButton} />
+        {confirmTopicCard && <div className="px-4 pt-4">{confirmTopicCard}</div>}
         <main className="px-4 pt-10 text-center">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#fbe9e6] text-3xl">🔒</div>
           <h2 className="mt-4 font-serif text-xl font-semibold">
@@ -39,8 +73,9 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string; t
 
   return (
     <>
-      <TopBar title={thread.title} back={`/clubs/${id}/talk`} />
+      <TopBar title={thread.title} back={`/clubs/${id}/talk`} right={deleteTopicButton} />
       <main className="space-y-3 px-4 pb-40 pt-4">
+        {confirmTopicCard}
         {thread.gate > 0 && (
           <p className="px-1 text-xs text-muted">
             Spoilers for {spanLabel(thread.gate)}
@@ -48,6 +83,7 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string; t
         )}
         {thread.posts.map((p) => {
           const u = db.users.find((x) => x.id === p.userId);
+          const deletable = canDeletePost(club, p, db.meId);
           return (
             <div key={p.id} className="flex gap-3">
               <Avatar user={u} size={32} />
@@ -55,8 +91,30 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string; t
                 <div className="flex items-baseline gap-2">
                   <span className="text-sm font-semibold">{u?.name}</span>
                   <span className="text-xs text-muted">{timeAgo(p.at)}</span>
+                  {deletable && confirmingPost !== p.id && (
+                    <button onClick={() => setConfirmingPost(p.id)} className="ml-auto text-xs text-muted" aria-label="Delete message">
+                      Delete
+                    </button>
+                  )}
                 </div>
                 <p className="mt-0.5 whitespace-pre-line text-[15px] leading-relaxed">{p.text}</p>
+                {confirmingPost === p.id && (
+                  <div className="mt-2 flex items-center gap-2 border-t border-line pt-2 text-sm">
+                    <span className="flex-1 text-muted">Delete this message for everyone?</span>
+                    <button onClick={() => setConfirmingPost(null)} className="font-medium">
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => {
+                        mutate((d) => actions.deletePost(d, id, threadId, p.id));
+                        setConfirmingPost(null);
+                      }}
+                      className="font-medium text-danger"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                )}
                 {p.aiDrafted && (
                   <div className="mt-1.5">
                     <AiLabel />
