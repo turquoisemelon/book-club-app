@@ -143,8 +143,14 @@ export default function ClubHome({ params }: { params: Promise<{ id: string }> }
                 return (
                   <Card key={a.id}>
                     <div className="mb-2 flex items-center gap-2">
-                      <Avatar user={host} size={24} />
-                      <span className="text-sm font-medium">{host?.name}</span>
+                      {host ? (
+                        <Link href={`/clubs/${id}/members/${host.id}`} className="flex items-center gap-2 active:opacity-70">
+                          <Avatar user={host} size={24} />
+                          <span className="text-sm font-medium">{host.name}</span>
+                        </Link>
+                      ) : (
+                        <Avatar user={host} size={24} />
+                      )}
                       <span className="text-xs text-muted">{timeAgo(a.at)}</span>
                     </div>
                     <p className="whitespace-pre-line text-[15px] leading-relaxed">{a.text}</p>
@@ -170,11 +176,16 @@ export default function ClubHome({ params }: { params: Promise<{ id: string }> }
             {club.members.map((m) => {
               const u = db.users.find((x) => x.id === m.userId);
               return (
-                <div key={m.userId} className="flex w-14 flex-col items-center gap-1">
+                <Link
+                  key={m.userId}
+                  href={`/clubs/${id}/members/${m.userId}`}
+                  aria-label={`${u?.name ?? "Member"}'s profile`}
+                  className="flex w-14 flex-col items-center gap-1 rounded-lg active:opacity-70"
+                >
                   <Avatar user={u} size={40} />
                   <span className="w-full truncate text-center text-xs">{u?.name}</span>
                   {m.role === "host" && <span className="text-[10px] text-accent">host</span>}
-                </div>
+                </Link>
               );
             })}
           </div>
