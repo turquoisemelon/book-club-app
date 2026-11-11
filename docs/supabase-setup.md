@@ -111,7 +111,7 @@ Each link works once and expires after an hour.
 
 ## 8. Email people about new Talk messages
 
-When someone replies in a Talk topic you started or wrote in, the app can email you. People switch it off on their account page. It sends at most one email per topic until you open it again, and leaves the message out if it would spoil a part of the book you haven't reached.
+When someone replies in a Talk topic you started or wrote in, the app can email you. It's off until people say yes: the app asks once, right after they first write in a topic, and they can change it any time on their account page. It sends at most one email per topic until you open it again, and leaves the message out if it would spoil a part of the book you haven't reached.
 
 It needs `0008_talk_notifications.sql` (step 2), the Resend domain from step 6, and two secrets in Vercel. Until both are set, the app works as before and just doesn't send these emails.
 

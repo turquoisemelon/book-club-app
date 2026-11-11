@@ -9,6 +9,7 @@ import { ProgressPicker } from "@/components/progress-picker";
 import { spanLabel } from "@/lib/progress";
 import { readKey } from "@/lib/unread";
 import { notifyTalk } from "@/lib/notify";
+import { EmailPrompt } from "@/components/email-prompt";
 import { AiLabel, Avatar, Button, Card, TopBar, inputClass } from "@/components/ui";
 
 export default function ThreadPage({ params }: { params: Promise<{ id: string; threadId: string }> }) {
@@ -141,6 +142,7 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string; t
           );
         })}
         {thread.posts.length === 0 && <p className="py-8 text-center text-sm text-muted">Be the first to say something.</p>}
+        {synced && thread.posts.some((p) => p.userId === db.meId) && <EmailPrompt />}
       </main>
       <form
         className="fixed bottom-[60px] left-1/2 z-20 flex w-full max-w-md -translate-x-1/2 gap-2 border-t border-line bg-paper p-3"

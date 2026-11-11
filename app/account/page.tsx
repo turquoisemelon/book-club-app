@@ -74,8 +74,8 @@ function EmailSettings() {
   const { profile, saveEmailTalk } = useAuth();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  // On unless you've switched it off (also before the setting exists).
-  const on = profile?.email_talk !== false;
+  // Off until you say yes.
+  const on = profile?.email_talk === true;
 
   return (
     <div>

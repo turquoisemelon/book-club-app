@@ -4,8 +4,9 @@ import { createContext, useCallback, useContext, useEffect, useState } from "rea
 import type { User } from "@supabase/supabase-js";
 import { getSupabase } from "./supabase/client";
 
-// email_talk is missing until 0008_talk_notifications.sql runs.
-export type Profile = { id: string; name: string; avatar_url?: string | null; email_talk?: boolean };
+// email_talk: null until we've asked, then their answer. Missing (undefined)
+// until 0008_talk_notifications.sql runs.
+export type Profile = { id: string; name: string; avatar_url?: string | null; email_talk?: boolean | null };
 
 type Auth = {
   // False while Supabase isn't configured: the app is local-only.

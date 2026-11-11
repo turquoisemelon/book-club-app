@@ -8,7 +8,8 @@ import { spanLabel } from "@/lib/progress";
 // Emails people in a Talk topic (they started it or wrote in it) when someone
 // posts a new message. The app calls this right after a message is saved.
 //
-// - Only for people who left "Email me about new messages" on (account page).
+// - Only for people who said yes: the app asks after they first write in a
+//   topic, and they can change it on their account page. Off until then.
 // - At most one email per topic until they open it again, so a lively chat
 //   sends one email, not twenty.
 // - No message preview if it would spoil a part of the book they haven't reached.
@@ -79,12 +80,12 @@ export async function POST(request: NextRequest) {
   // Before 0008_talk_notifications.sql runs, these columns and tables don't exist.
   if (profilesRes.error || readsRes.error) return NextResponse.json({ sent: 0, skipped: "run 0008_talk_notifications.sql" });
 
-  const profiles = new Map(((profilesRes.data ?? []) as { id: string; name: string; email_talk: boolean }[]).map((p) => [p.id, p]));
+  const profiles = new Map(((profilesRes.data ?? []) as { id: string; name: string; email_talk: boolean | null }[]).map((p) => [p.id, p]));
   const reads = new Map(((readsRes.data ?? []) as ReadRow[]).map((r) => [r.user_id, r]));
   const senderName = profiles.get(senderId)?.name || "Someone";
 
   const recipients = candidates.filter((id) => {
-    if (profiles.get(id)?.email_talk === false) return false;
+    if (profiles.get(id)?.email_talk !== true) return false;
     const r = reads.get(id);
     // Already emailed about this topic and haven't opened it since: wait.
     if (r?.emailed_at && time(r.emailed_at) > time(r.read_at)) return false;
@@ -107,13 +108,13 @@ export async function POST(request: NextRequest) {
     const canSee = (members.get(id)?.progress ?? 0) >= thread.gate;
     const preview = canSee ? clip(post.text, 300) : `This topic has spoilers for ${spanLabel(thread.gate)}, so we've left the message out.`;
     const subject = `${senderName} replied in “${clip(thread.title, 60)}”`;
-    const text = `${senderName} in ${club}:\n\n${preview}\n\nReply: ${link}\n\nYou're getting this because you're in this topic. Turn these emails off: ${settings}`;
+    const text = `${senderName} in ${club}:\n\n${preview}\n\nReply: ${link}\n\nYou asked for emails about Talk topics you're in. Turn these emails off: ${settings}`;
     const html = `<div style="font-family:Georgia,serif;max-width:480px;color:#1f2a24">
 <p style="font:14px system-ui,sans-serif;color:#6b6f68;margin:0 0 8px">${escapeHtml(club)} · Talk</p>
 <p style="font-size:18px;margin:0 0 12px"><b>${escapeHtml(senderName)}</b> replied in “${escapeHtml(thread.title)}”</p>
 <p style="font:15px/1.5 system-ui,sans-serif;white-space:pre-line;border-left:3px solid #e7dfd2;padding-left:12px;margin:0 0 20px">${escapeHtml(preview)}</p>
 <p style="margin:0 0 24px"><a href="${link}" style="font:600 15px system-ui,sans-serif;background:#2f5d50;color:#fff;padding:10px 16px;border-radius:10px;text-decoration:none">Open the conversation</a></p>
-<p style="font:12px system-ui,sans-serif;color:#6b6f68;margin:0">You're getting this because you're in this topic. We'll email you once until you open it again. <a href="${settings}" style="color:#6b6f68">Turn these emails off</a>.</p>
+<p style="font:12px system-ui,sans-serif;color:#6b6f68;margin:0">You asked for emails about Talk topics you're in. We'll email you once until you open it again. <a href="${settings}" style="color:#6b6f68">Turn these emails off</a>.</p>
 </div>`;
 
     const res = await fetch("https://api.resend.com/emails", {
