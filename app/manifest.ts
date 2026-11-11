@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Chapter Club",
     short_name: "Chapter Club",
-    description: "Run your book club with an AI co-host that does the busywork.",
+    description: "Book polls, meetups and spoiler-free chat for your book club.",
     start_url: "/",
     display: "standalone",
     background_color: "#faf6ef",
