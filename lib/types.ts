@@ -137,4 +137,7 @@ export type DB = {
   clubs: Club[];
   shelves: Record<string, ShelfEntry[]>;
   requested: string[];
+  // When you last opened each Talk topic, keyed by readKey(clubId, threadId).
+  // Optional so data saved before this existed keeps loading.
+  reads?: Record<string, string>;
 };

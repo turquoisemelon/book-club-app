@@ -4,7 +4,8 @@ import { createContext, useCallback, useContext, useEffect, useState } from "rea
 import type { User } from "@supabase/supabase-js";
 import { getSupabase } from "./supabase/client";
 
-export type Profile = { id: string; name: string; avatar_url?: string | null };
+// email_talk is missing until 0008_talk_notifications.sql runs.
+export type Profile = { id: string; name: string; avatar_url?: string | null; email_talk?: boolean };
 
 type Auth = {
   // False while Supabase isn't configured: the app is local-only.
@@ -15,6 +16,8 @@ type Auth = {
   saveName: (name: string) => Promise<string | null>;
   // A data: URL, or null to remove the picture. Returns an error message or null.
   saveAvatar: (avatar: string | null) => Promise<string | null>;
+  // Emails about new messages in Talk topics you're in. Returns an error message or null.
+  saveEmailTalk: (on: boolean) => Promise<string | null>;
   signOut: () => Promise<void>;
 };
 
@@ -77,11 +80,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [supabase, user],
   );
 
+  const saveEmailTalk = useCallback(
+    async (on: boolean) => {
+      if (!supabase || !user) return "Not signed in.";
+      const { data, error } = await supabase.from("profiles").update({ email_talk: on }).eq("id", user.id).select("*").single();
+      if (error) return /email_talk/.test(error.message) ? "Email notifications aren't switched on yet (run 0008_talk_notifications.sql in Supabase)." : error.message;
+      setProfile(data);
+      return null;
+    },
+    [supabase, user],
+  );
+
   const signOut = useCallback(async () => {
     await supabase?.auth.signOut();
   }, [supabase]);
 
-  return <AuthContext.Provider value={{ enabled: Boolean(supabase), loading, user, profile, saveName, saveAvatar, signOut }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ enabled: Boolean(supabase), loading, user, profile, saveName, saveAvatar, saveEmailTalk, signOut }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
