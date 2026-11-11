@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { actions, canDeletePost, canDeleteThread, useClub, useStore } from "@/lib/store";
@@ -86,10 +87,14 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string; t
           const deletable = canDeletePost(club, p, db.meId);
           return (
             <div key={p.id} className="flex gap-3">
-              <Avatar user={u} size={32} />
+              <Link href={`/clubs/${id}/members/${p.userId}`} aria-label={`${u?.name ?? "Member"}'s profile`} className="shrink-0 self-start active:opacity-70">
+                <Avatar user={u} size={32} />
+              </Link>
               <div className="min-w-0 flex-1 rounded-2xl rounded-tl-sm border border-line bg-card px-3.5 py-2.5">
                 <div className="flex items-baseline gap-2">
-                  <span className="text-sm font-semibold">{u?.name}</span>
+                  <Link href={`/clubs/${id}/members/${p.userId}`} className="text-sm font-semibold active:opacity-70">
+                    {u?.name}
+                  </Link>
                   <span className="text-xs text-muted">{timeAgo(p.at)}</span>
                   {deletable && confirmingPost !== p.id && (
                     <button onClick={() => setConfirmingPost(p.id)} className="ml-auto text-xs text-muted" aria-label="Delete message">
