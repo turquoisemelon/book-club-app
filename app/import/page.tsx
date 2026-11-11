@@ -32,12 +32,22 @@ export default function Import() {
       <main className="px-4 pb-4 pt-4">
         {!rows ? (
           <>
+            <div className="mb-4 rounded-xl bg-accent-soft px-4 py-3 text-sm leading-relaxed">
+              <p className="font-medium">Use the Goodreads website, not the app</p>
+              <p className="mt-1 text-muted">
+                The Goodreads mobile app can&apos;t export your library. Open goodreads.com in a web browser on your phone or computer instead.
+              </p>
+            </div>
             <ol className="space-y-3 px-1 text-[15px] leading-relaxed">
               <li>
-                <span className="font-semibold">1.</span> On Goodreads, go to My Books, then Import and export, and tap <span className="font-medium">Export library</span>.
+                <span className="font-semibold">1.</span> On the Goodreads website, go to My Books, then Import and export, and tap <span className="font-medium">Export library</span>. Or go straight to{" "}
+                <a href="https://www.goodreads.com/review/import" target="_blank" rel="noopener noreferrer" className="font-medium text-accent underline underline-offset-2">
+                  goodreads.com/review/import
+                </a>
+                .
               </li>
               <li>
-                <span className="font-semibold">2.</span> Download the CSV file it gives you.
+                <span className="font-semibold">2.</span> Download the CSV file it gives you. If you exported on a computer, open this page there too, or send the file to your phone.
               </li>
               <li>
                 <span className="font-semibold">3.</span> Choose it here. We read the file on your phone and keep only your book list: titles, shelves and ratings, never your reviews or notes.
