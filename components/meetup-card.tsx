@@ -1,10 +1,11 @@
 "use client";
 
-import { actions, useStore } from "@/lib/store";
+import { useState } from "react";
+import { actions, canCancelMeetup, useStore } from "@/lib/store";
 import { daysUntil, formatDay, formatTime } from "@/lib/format";
 import { spanLabel } from "@/lib/progress";
 import type { Book, Club, Meetup, Rsvp } from "@/lib/types";
-import { AvatarStack, Card, Pill, cx } from "./ui";
+import { AvatarStack, Button, Card, Pill, cx } from "./ui";
 
 const choices: { value: Rsvp; label: string }[] = [
   { value: "yes", label: "Going" },
@@ -41,6 +42,12 @@ export function MeetupCard({ club, meetup, book, compact }: { club: Club; meetup
     .map(([id]) => db.users.find((u) => u.id === id));
   const past = new Date(meetup.date) < new Date();
   const d = new Date(meetup.date);
+  const [confirming, setConfirming] = useState(false);
+  const canCancel = !past && canCancelMeetup(club, meetup, db.meId);
+  // Name whoever scheduled it, unless it was a host (the default).
+  const scheduler = meetup.createdBy && club.members.some((m) => m.userId === meetup.createdBy && m.role !== "host")
+    ? db.users.find((u) => u.id === meetup.createdBy)
+    : undefined;
 
   return (
     <Card>
@@ -62,10 +69,30 @@ export function MeetupCard({ club, meetup, book, compact }: { club: Club; meetup
               Read {spanLabel(meetup.upTo)}
             </p>
           )}
+          {scheduler && <p className="mt-1 text-xs text-muted">Scheduled by {meetup.createdBy === db.meId ? "you" : scheduler.name}</p>}
         </div>
+        {canCancel && !confirming && (
+          <button onClick={() => setConfirming(true)} className="self-start text-sm font-medium text-muted">
+            Cancel
+          </button>
+        )}
       </div>
 
-      {!past && (
+      {confirming && (
+        <div className="mt-4 space-y-3 rounded-xl border border-line bg-paper p-3">
+          <p className="text-sm">Cancel this meetup? It disappears for everyone in the club.</p>
+          <div className="flex gap-2">
+            <Button size="sm" variant="secondary" className="flex-1" onClick={() => setConfirming(false)}>
+              Keep it
+            </Button>
+            <Button size="sm" variant="danger" className="flex-1" onClick={() => mutate((draft) => actions.cancelMeetup(draft, club.id, meetup.id))}>
+              Cancel meetup
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {!past && !confirming && (
         <div className="mt-4 flex gap-2">
           {choices.map((c) => (
             <button
