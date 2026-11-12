@@ -7,11 +7,13 @@ import { actions, useClub, useStore } from "@/lib/store";
 import { timeAgo, uid } from "@/lib/format";
 import { ProgressPicker } from "@/components/progress-picker";
 import { STEPS, gateLabel, snapDown, spanLabel } from "@/lib/progress";
+import { unreadIn } from "@/lib/unread";
+import { UnreadBadge } from "@/components/unread-badge";
 import { Button, Card, Field, Pill, SectionTitle, TopBar, inputClass } from "@/components/ui";
 
 export default function Talk({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { club, book, me } = useClub(id);
+  const { club, book, me, db } = useClub(id);
   const { mutate } = useStore();
   const router = useRouter();
   const [composing, setComposing] = useState(false);
@@ -79,17 +81,23 @@ export default function Talk({ params }: { params: Promise<{ id: string }> }) {
           {threads.map((t) => {
             const locked = t.gate > progress;
             const last = t.posts.at(-1);
+            const unread = locked ? 0 : unreadIn(db, club, t);
             return (
               <Link key={t.id} href={`/clubs/${id}/talk/${t.id}`} className="block">
                 <Card className={locked ? "bg-paper" : ""}>
                   <div className="flex items-start justify-between gap-2">
-                    <p className={locked ? "font-medium text-muted" : "font-medium"}>{locked ? `Spoilers for ${spanLabel(t.gate)}` : t.title}</p>
-                    {locked ? <Pill tone="warn">Locked</Pill> : t.gate > 0 ? <Pill>{gateLabel(t.gate)}</Pill> : <Pill tone="accent">Spoiler-free</Pill>}
+                    <p className={locked ? "font-medium text-muted" : unread ? "font-semibold" : "font-medium"}>{locked ? `Spoilers for ${spanLabel(t.gate)}` : t.title}</p>
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      {locked ? <Pill tone="warn">Locked</Pill> : t.gate > 0 ? <Pill>{gateLabel(t.gate)}</Pill> : <Pill tone="accent">Spoiler-free</Pill>}
+                      {unread > 0 && <UnreadBadge count={unread} label={`${unread} new message${unread > 1 ? "s" : ""}`} />}
+                    </div>
                   </div>
-                  <p className="mt-1 text-sm text-muted">
+                  <p className={unread ? "mt-1 text-sm font-medium text-ink" : "mt-1 text-sm text-muted"}>
                     {locked
                       ? `Opens when you've read ${spanLabel(t.gate)}`
-                      : last
+                      : unread && last
+                        ? `${unread} new · ${timeAgo(last.at)}`
+                        : last
                         ? `${t.posts.length} message${t.posts.length > 1 ? "s" : ""} · ${timeAgo(last.at)}`
                         : "No messages yet"}
                   </p>

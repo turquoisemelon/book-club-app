@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/auth";
 import { shrinkSquare } from "@/lib/books";
 import { colorFor } from "@/lib/remote";
 import { useStore } from "@/lib/store";
-import { Avatar, Button, ButtonLink, Card, Field, TopBar, inputClass } from "@/components/ui";
+import { Avatar, Button, ButtonLink, Card, Field, Toggle, TopBar, inputClass } from "@/components/ui";
 
 function PictureForm() {
   const { user, profile, saveAvatar } = useAuth();
@@ -66,6 +66,42 @@ function PictureForm() {
           </p>
         )}
       </div>
+    </div>
+  );
+}
+
+function EmailSettings() {
+  const { profile, saveEmailTalk } = useAuth();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  // Off until you say yes.
+  const on = profile?.email_talk === true;
+
+  return (
+    <div>
+      <div className="flex items-center gap-4">
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium">Email me about new messages</p>
+          <p className="text-xs text-muted">When someone replies in a Talk topic you started or wrote in. One email per topic until you open it again.</p>
+        </div>
+        <Toggle
+          checked={on}
+          label="Email me about new messages"
+          onChange={async (v) => {
+            if (busy) return;
+            setBusy(true);
+            setError("");
+            const err = await saveEmailTalk(v);
+            setBusy(false);
+            if (err) setError(err);
+          }}
+        />
+      </div>
+      {error && (
+        <p aria-live="polite" className="mt-2 text-sm text-danger">
+          {error}
+        </p>
+      )}
     </div>
   );
 }
@@ -201,6 +237,9 @@ export default function Account() {
                 }
               />
               {saved?.kind === "updated" && <SavedNote onDone={clearSaved} />}
+            </Card>
+            <Card>
+              <EmailSettings />
             </Card>
             <Button
               variant="secondary"

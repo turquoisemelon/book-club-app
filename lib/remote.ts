@@ -7,6 +7,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Book, Club, DB, Membership, ShelfEntry, User } from "./types";
 import { DB_VERSION } from "./sample-data";
 import { validRating } from "./books";
+import { readKey } from "./unread";
 
 // Parts of a club stored together as JSON in clubs.content for now.
 type ClubContent = Pick<Club, "polls" | "meetups" | "threads" | "drafts" | "announcements" | "joinRequests" | "pastReads">;
@@ -223,13 +224,16 @@ export async function loadRemote(supabase: SupabaseClient, userId: string): Prom
   const memberRows = (membersRes.data ?? []) as MemberRow[];
 
   const ids = Array.from(new Set([userId, ...memberRows.map((m) => m.user_id)]));
-  const [profilesRes, shelfRows] = await Promise.all([
+  const [profilesRes, shelfRows, readsRes] = await Promise.all([
     // "*" so this keeps working before 0007_avatars.sql adds avatar_url.
     supabase.from("profiles").select("*").in("id", ids),
     // Your shelves, plus clubmates' (the co-host's shortlist reads their want-to-read).
     fetchAll<ShelfRow>((from, to) =>
       supabase.from("shelf_entries").select("user_id, book_id, shelf, rating, added_at, read_at").in("user_id", ids).order("added_at", { ascending: false }).order("book_id").range(from, to),
     ),
+    // When you last opened each Talk topic. Errors are ignored so this keeps
+    // working before 0008_talk_notifications.sql adds the table.
+    supabase.from("talk_reads").select("club_id, thread_id, read_at").eq("user_id", userId).not("read_at", "is", null),
   ]);
   if (profilesRes.error) throw profilesRes.error;
 
@@ -278,10 +282,17 @@ export async function loadRemote(supabase: SupabaseClient, userId: string): Prom
     if (keep.length) shelves[userId] = keep;
   }
 
+  const reads: Record<string, string> = {};
+  for (const r of (readsRes.error ? [] : (readsRes.data ?? [])) as { club_id: string; thread_id: string; read_at: string }[]) {
+    // Same format as the app's own timestamps, so they compare as strings.
+    reads[readKey(r.club_id, r.thread_id)] = new Date(r.read_at).toISOString();
+  }
+
   return {
     version: DB_VERSION,
     meId: userId,
     requested: prefs.requested,
+    reads,
     shelves,
     users: Array.from(users.values()),
     books,
@@ -320,6 +331,17 @@ export async function saveChanges(supabase: SupabaseClient, prev: DB, next: DB) 
   const removed = Array.from(prevShelf.keys()).filter((id) => !kept.has(id));
   for (const part of chunks(removed, 150)) {
     await check(supabase.from("shelf_entries").delete().eq("user_id", next.meId).in("book_id", part));
+  }
+
+  // Topics you opened. Best effort: before 0008_talk_notifications.sql runs the
+  // table doesn't exist, and a badge shouldn't block saving anything else.
+  const openedTopics = Object.entries(next.reads ?? {}).filter(([key, at]) => prev.reads?.[key] !== at);
+  if (openedTopics.length) {
+    const rows = openedTopics.map(([key, at]) => {
+      const [club_id, thread_id] = key.split(":");
+      return { user_id: next.meId, club_id, thread_id, read_at: at };
+    });
+    await supabase.from("talk_reads").upsert(rows, { onConflict: "user_id,club_id,thread_id" });
   }
 
   // 2. Clubs: deleted, new, changed.

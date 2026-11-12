@@ -25,6 +25,7 @@ Run each file in [`supabase/migrations`](../supabase/migrations) once, in number
 | [`0005_fractional_ratings.sql`](../supabase/migrations/0005_fractional_ratings.sql) | Lets ratings like 2.25 be saved |
 | [`0006_progress_percent.sql`](../supabase/migrations/0006_progress_percent.sql) | Reading progress in quarters of the book (25/50/75/100%) instead of chapters. Run after the app update that uses quarters is live. |
 | [`0007_avatars.sql`](../supabase/migrations/0007_avatars.sql) | Profile pictures |
+| [`0008_talk_notifications.sql`](../supabase/migrations/0008_talk_notifications.sql) | Unread badges that follow you across devices, and the "email me about new messages" setting |
 
 When a new file appears here in a later update, run just that one. Running a file twice does no harm.
 
@@ -107,3 +108,20 @@ By default, Supabase's sign-in link only works in the same browser that asked fo
 4. Request a new link and open it anywhere. You land on your account page, signed in, in whichever browser opened it.
 
 Each link works once and expires after an hour.
+
+## 8. Email people about new Talk messages
+
+When someone replies in a Talk topic you started or wrote in, the app can email you. It's off until people say yes: the app asks once, right after they first write in a topic, and they can change it any time on their account page. It sends at most one email per topic until you open it again, and leaves the message out if it would spoil a part of the book you haven't reached.
+
+It needs `0008_talk_notifications.sql` (step 2), the Resend domain from step 6, and two secrets in Vercel. Until both are set, the app works as before and just doesn't send these emails.
+
+1. **A second Resend key.** In Resend, open **API Keys → Create API key**. Name it `vercel`, set **Sending access**, limit it to `chapterclub.app`, and copy it (starts with `re_`).
+2. **Supabase's secret key.** In Supabase, open **Project Settings → API Keys** and copy the **secret** key (starts with `sb_secret_`; older projects call it the `service_role` key). It can read everything, so it only ever goes into Vercel.
+3. In Vercel, open the project → **Settings → Environment Variables** and add, for **Production** and **Preview**:
+   - `RESEND_API_KEY` = the `re_…` key from 1
+   - `SUPABASE_SECRET_KEY` = the key from 2
+   - optional: `NOTIFY_EMAIL_FROM` = `Chapter Club <hello@chapterclub.app>` (that's the default)
+4. Redeploy (Vercel → **Deployments** → the latest one → **⋯ → Redeploy**) so the new settings take effect.
+5. Try it with two accounts: both write in a topic, then one replies. The other gets an email within a minute. If not, check **Emails → Logs** in Resend.
+
+Don't put either key in a `NEXT_PUBLIC_` variable, in chat, or in the code.

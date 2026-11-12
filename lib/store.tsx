@@ -9,6 +9,7 @@ import { uid } from "./format";
 import { useAuth } from "./auth";
 import { getSupabase } from "./supabase/client";
 import { isAccountId, loadRemote, saveChanges, savePrefs } from "./remote";
+import { readKey } from "./unread";
 
 // Signed out (or before accounts are switched on), everything lives in this
 // browser's localStorage, as in the prototype. Signed in, clubs load from and
@@ -19,7 +20,9 @@ type Store = {
   db: DB;
   // True when data is saved to your account rather than only on this device.
   synced: boolean;
-  mutate: (fn: (draft: DB) => void) => void;
+  // `afterSave` runs once the change is saved to your account (never when
+  // signed out, or when the save fails).
+  mutate: (fn: (draft: DB) => void, afterSave?: () => void) => void;
   reload: () => void;
 };
 
@@ -103,7 +106,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, [db, userId]);
 
   const mutate = useCallback(
-    (fn: (draft: DB) => void) => {
+    (fn: (draft: DB) => void, afterSave?: () => void) => {
       const prev = dbRef.current;
       if (!prev) return;
       const next = structuredClone(prev);
@@ -113,7 +116,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (userId && supabase && prev.meId === userId) {
         saving.current = saving.current
           .then(() => saveChanges(supabase, prev, next))
-          .then(() => setSaveError(""))
+          .then(() => {
+            setSaveError("");
+            afterSave?.();
+          })
           .catch((e: Error) => {
             setSaveError(e.message);
             reload();
@@ -331,6 +337,11 @@ export const actions = {
     const post = thread?.posts.find((p) => p.id === postId);
     if (!thread || !post || !canDeletePost(club, post, db.meId)) return;
     thread.posts = thread.posts.filter((p) => p.id !== postId);
+  },
+
+  // Marks a Talk topic as read up to now, which clears its unread badge.
+  markRead(db: DB, clubId: string, threadId: string) {
+    db.reads = { ...db.reads, [readKey(clubId, threadId)]: new Date().toISOString() };
   },
 
   addPost(db: DB, clubId: string, threadId: string, text: string) {

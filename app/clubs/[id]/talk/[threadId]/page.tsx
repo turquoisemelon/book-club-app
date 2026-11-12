@@ -1,23 +1,35 @@
 "use client";
 
 import Link from "next/link";
-import { use, useState } from "react";
+import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { actions, canDeletePost, canDeleteThread, useClub, useStore } from "@/lib/store";
 import { timeAgo } from "@/lib/format";
 import { ProgressPicker } from "@/components/progress-picker";
 import { spanLabel } from "@/lib/progress";
+import { readKey } from "@/lib/unread";
+import { notifyTalk } from "@/lib/notify";
+import { EmailPrompt } from "@/components/email-prompt";
 import { AiLabel, Avatar, Button, Card, TopBar, inputClass } from "@/components/ui";
 
 export default function ThreadPage({ params }: { params: Promise<{ id: string; threadId: string }> }) {
   const { id, threadId } = use(params);
   const { club, book, me, db } = useClub(id);
-  const { mutate } = useStore();
+  const { mutate, synced } = useStore();
   const router = useRouter();
   const [text, setText] = useState("");
+  const thread = club?.threads.find((t) => t.id === threadId);
+  const lastAt = thread?.posts.at(-1)?.at ?? "";
+  const readAt = db.reads?.[readKey(id, threadId)] ?? "";
+  const canRead = Boolean(thread) && (thread?.gate ?? 0) <= (me?.progress ?? 0);
+
+  // Opening a topic (or seeing new messages arrive in it) clears its badge.
+  useEffect(() => {
+    if (canRead && (!readAt || lastAt > readAt)) mutate((d) => actions.markRead(d, id, threadId));
+  }, [canRead, lastAt, readAt, id, threadId, mutate]);
+
   const [confirmingTopic, setConfirmingTopic] = useState(false);
   const [confirmingPost, setConfirmingPost] = useState<string | null>(null);
-  const thread = club?.threads.find((t) => t.id === threadId);
   if (!club || !thread) return null;
 
   const locked = thread.gate > (me?.progress ?? 0);
@@ -130,13 +142,18 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string; t
           );
         })}
         {thread.posts.length === 0 && <p className="py-8 text-center text-sm text-muted">Be the first to say something.</p>}
+        {synced && thread.posts.some((p) => p.userId === db.meId) && <EmailPrompt />}
       </main>
       <form
         className="fixed bottom-[60px] left-1/2 z-20 flex w-full max-w-md -translate-x-1/2 gap-2 border-t border-line bg-paper p-3"
         onSubmit={(e) => {
           e.preventDefault();
           if (!text.trim()) return;
-          mutate((d) => actions.addPost(d, id, threadId, text.trim()));
+          mutate(
+            (d) => actions.addPost(d, id, threadId, text.trim()),
+            // Once it's saved, email others in this topic who asked for it.
+            () => synced && notifyTalk(id, threadId),
+          );
           setText("");
         }}
       >

@@ -8,6 +8,7 @@ import { Logo } from "@/components/brand";
 import { Landing } from "@/components/landing";
 import { ShelfRow } from "@/components/shelf-row";
 import { SHELVES, shelfBooks } from "@/lib/shelves";
+import { unreadInClub } from "@/lib/unread";
 import { Avatar, AvatarStack, ButtonLink, ClubImage, Card, Pill, SectionTitle, SparkleIcon } from "@/components/ui";
 
 export default function Home() {
@@ -60,6 +61,7 @@ export default function Home() {
           const next = club.meetups.find((m) => new Date(m.date) > new Date());
           const pending = club.drafts.filter((d) => d.status === "pending").length;
           const isHost = club.members.some((m) => m.userId === db.meId && m.role === "host");
+          const unread = unreadInClub(db, club);
           return (
             <Link key={club.id} href={`/clubs/${club.id}`} className="block active:scale-[0.99]">
               <Card className="flex gap-4">
@@ -74,6 +76,12 @@ export default function Home() {
                     <AvatarStack users={club.members.map((m) => db.users.find((u) => u.id === m.userId))} max={4} />
                     {next && <span className="text-xs text-muted">Meets {daysUntil(next.date)}</span>}
                   </div>
+                  {unread > 0 && (
+                    <div className="mt-3 flex items-center gap-1.5 rounded-lg bg-[#fbe9e6] px-2.5 py-1.5 text-xs font-medium text-danger">
+                      <span className="h-1.5 w-1.5 rounded-full bg-danger" />
+                      {unread} new message{unread > 1 ? "s" : ""} in Talk
+                    </div>
+                  )}
                   {isHost && pending > 0 && (
                     <div className="mt-3 flex items-center gap-1.5 rounded-lg bg-ai-soft px-2.5 py-1.5 text-xs font-medium text-ai">
                       <SparkleIcon size={12} />
