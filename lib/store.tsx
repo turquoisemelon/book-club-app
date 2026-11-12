@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
-import type { Book, Club, DB, Draft, Post, Rsvp, ShelfEntry, Thread } from "./types";
+import type { Book, Club, DB, Draft, Meetup, Post, Rsvp, ShelfEntry, Thread } from "./types";
 import { DB_VERSION, makeSampleDB } from "./sample-data";
 import { questionsFor, recapFor, reminderFor, scheduleFor, shortlistFor } from "./cohost";
 import { spanLabel } from "./progress";
@@ -175,6 +175,10 @@ export function canDeleteThread(club: Club, thread: Thread, userId: string) {
   return isHostOf(club, userId) || (!!thread.createdBy && thread.createdBy === userId);
 }
 
+export function canCancelMeetup(club: Club, meetup: Meetup, userId: string) {
+  return isHostOf(club, userId) || (!!meetup.createdBy && meetup.createdBy === userId);
+}
+
 export function canDeletePost(club: Club, post: Post, userId: string) {
   return isHostOf(club, userId) || post.userId === userId;
 }
@@ -284,8 +288,17 @@ export const actions = {
 
   addMeetup(db: DB, clubId: string, input: { date: string; place: string; videoLink?: string; upTo: number }) {
     const club = clubIn(db, clubId);
-    club.meetups.push({ id: uid("m"), ...input, rsvps: { [db.meId]: "yes" } });
+    club.meetups.push({ id: uid("m"), ...input, rsvps: { [db.meId]: "yes" }, createdBy: db.meId });
     club.meetups.sort((a, b) => a.date.localeCompare(b.date));
+  },
+
+  // Any member can schedule. The host can cancel any meetup; anyone else only
+  // the meetups they scheduled.
+  cancelMeetup(db: DB, clubId: string, meetupId: string) {
+    const club = clubIn(db, clubId);
+    const meetup = club.meetups.find((m) => m.id === meetupId);
+    if (!meetup || !canCancelMeetup(club, meetup, db.meId)) return;
+    club.meetups = club.meetups.filter((m) => m.id !== meetupId);
   },
 
   rsvp(db: DB, clubId: string, meetupId: string, value: Rsvp) {

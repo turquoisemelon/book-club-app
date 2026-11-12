@@ -15,7 +15,7 @@ function defaultDate() {
 export default function Meetups({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ new?: string }> }) {
   const { id } = use(params);
   const { new: startNew } = use(searchParams);
-  const { club, book, isHost } = useClub(id);
+  const { club, book } = useClub(id);
   const { mutate } = useStore();
   const [composing, setComposing] = useState(startNew === "1");
   const [date, setDate] = useState(defaultDate);
@@ -35,7 +35,7 @@ export default function Meetups({ params, searchParams }: { params: Promise<{ id
         title="Meetups"
         back={`/clubs/${id}`}
         right={
-          isHost && !composing ? (
+          !composing ? (
             <Button size="sm" variant="secondary" onClick={() => setComposing(true)}>
               Schedule
             </Button>
@@ -60,6 +60,11 @@ export default function Meetups({ params, searchParams }: { params: Promise<{ id
             <Field label="Video link (optional)" hint="Paste a Zoom or Google Meet link for anyone joining remotely.">
               <input value={videoLink} onChange={(e) => setVideoLink(e.target.value)} placeholder="https://" className={inputClass} />
             </Field>
+            {!videoLink && (
+              <a href="https://meet.google.com/new" target="_blank" rel="noreferrer" className="inline-block text-sm font-medium text-accent">
+                Create a Google Meet link ↗
+              </a>
+            )}
             {book && (
               <Field label="Read up to">
                 <select value={upTo} onChange={(e) => setUpTo(Number(e.target.value))} className={inputClass}>

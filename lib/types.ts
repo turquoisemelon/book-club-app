@@ -51,6 +51,8 @@ export type Meetup = {
   videoLink?: string;
   upTo: number;
   rsvps: Record<string, Rsvp>;
+  // Who scheduled it. Older meetups have none and count as the host's.
+  createdBy?: string;
 };
 
 export type Post = {

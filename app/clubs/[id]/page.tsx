@@ -126,11 +126,9 @@ export default function ClubHome({ params }: { params: Promise<{ id: string }> }
         ) : (
           <Card className="text-center">
             <p className="text-sm text-muted">No meetup scheduled.</p>
-            {isHost && (
-              <ButtonLink href={`/clubs/${id}/meetups?new=1`} size="sm" className="mt-3">
-                Schedule one
-              </ButtonLink>
-            )}
+            <ButtonLink href={`/clubs/${id}/meetups?new=1`} size="sm" className="mt-3">
+              Schedule one
+            </ButtonLink>
           </Card>
         )}
 
