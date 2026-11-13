@@ -5,6 +5,7 @@ import { actions, canCancelMeetup, useStore } from "@/lib/store";
 import { daysUntil, formatDay, formatTime } from "@/lib/format";
 import { spanLabel } from "@/lib/progress";
 import type { Book, Club, Meetup, Rsvp } from "@/lib/types";
+import { MeetupForm } from "./meetup-form";
 import { AvatarStack, Button, Card, Pill, cx } from "./ui";
 
 const choices: { value: Rsvp; label: string }[] = [
@@ -43,11 +44,32 @@ export function MeetupCard({ club, meetup, book, compact }: { club: Club; meetup
   const past = new Date(meetup.date) < new Date();
   const d = new Date(meetup.date);
   const [confirming, setConfirming] = useState(false);
-  const canCancel = !past && canCancelMeetup(club, meetup, db.meId);
+  const [editing, setEditing] = useState(false);
+  // Whoever can cancel a meetup can also edit it.
+  const canManage = !past && canCancelMeetup(club, meetup, db.meId);
+  const moved = !past && meetup.movedFrom ? new Date(meetup.movedFrom) : undefined;
   // Name whoever scheduled it, unless it was a host (the default).
   const scheduler = meetup.createdBy && club.members.some((m) => m.userId === meetup.createdBy && m.role !== "host")
     ? db.users.find((u) => u.id === meetup.createdBy)
     : undefined;
+
+  if (editing) {
+    return (
+      <Card className="space-y-3">
+        <h2 className="font-serif text-lg font-semibold">Edit meetup</h2>
+        <MeetupForm
+          meetup={meetup}
+          book={book}
+          onCancel={() => setEditing(false)}
+          onSave={(input) => {
+            mutate((draft) => actions.editMeetup(draft, club.id, meetup.id, input));
+            setEditing(false);
+          }}
+        />
+        <p className="text-xs text-muted">Everyone&apos;s RSVPs stay as they are. If you change the date or time, the club sees it flagged.</p>
+      </Card>
+    );
+  }
 
   return (
     <Card>
@@ -57,13 +79,19 @@ export function MeetupCard({ club, meetup, book, compact }: { club: Club; meetup
           <span className="font-serif text-xl font-semibold leading-none">{d.getDate()}</span>
         </div>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <p className="font-semibold">{formatDay(meetup.date)}</p>
             {!past && <Pill tone="accent">{daysUntil(meetup.date)}</Pill>}
+            {moved && <Pill tone="warn">Time changed</Pill>}
           </div>
           <p className="text-sm text-muted">
             {formatTime(meetup.date)} · {meetup.place}
           </p>
+          {moved && (
+            <p className="text-xs text-muted">
+              Was <span className="line-through">{formatDay(meetup.movedFrom!)}, {formatTime(meetup.movedFrom!)}</span>
+            </p>
+          )}
           {book && (
             <p className="mt-1 text-sm">
               Read {spanLabel(meetup.upTo)}
@@ -71,10 +99,15 @@ export function MeetupCard({ club, meetup, book, compact }: { club: Club; meetup
           )}
           {scheduler && <p className="mt-1 text-xs text-muted">Scheduled by {meetup.createdBy === db.meId ? "you" : scheduler.name}</p>}
         </div>
-        {canCancel && !confirming && (
-          <button onClick={() => setConfirming(true)} className="self-start text-sm font-medium text-muted">
-            Cancel
-          </button>
+        {canManage && !confirming && (
+          <div className="flex shrink-0 gap-3 self-start text-sm font-medium">
+            <button onClick={() => setEditing(true)} className="text-accent">
+              Edit
+            </button>
+            <button onClick={() => setConfirming(true)} className="text-muted">
+              Cancel
+            </button>
+          </div>
         )}
       </div>
 
