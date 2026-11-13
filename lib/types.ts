@@ -53,6 +53,9 @@ export type Meetup = {
   rsvps: Record<string, Rsvp>;
   // Who scheduled it. Older meetups have none and count as the host's.
   createdBy?: string;
+  // When the date or time was changed after scheduling, the date members
+  // originally planned around. Cleared if it is moved back.
+  movedFrom?: string;
 };
 
 export type Post = {

@@ -175,6 +175,7 @@ export function canDeleteThread(club: Club, thread: Thread, userId: string) {
   return isHostOf(club, userId) || (!!thread.createdBy && thread.createdBy === userId);
 }
 
+// The same people can edit and cancel: the host, or whoever scheduled it.
 export function canCancelMeetup(club: Club, meetup: Meetup, userId: string) {
   return isHostOf(club, userId) || (!!meetup.createdBy && meetup.createdBy === userId);
 }
@@ -299,6 +300,22 @@ export const actions = {
     const meetup = club.meetups.find((m) => m.id === meetupId);
     if (!meetup || !canCancelMeetup(club, meetup, db.meId)) return;
     club.meetups = club.meetups.filter((m) => m.id !== meetupId);
+  },
+
+  // Same rule as cancelling. RSVPs stay; a date or time change is flagged.
+  editMeetup(db: DB, clubId: string, meetupId: string, input: { date: string; place: string; videoLink?: string; upTo: number }) {
+    const club = clubIn(db, clubId);
+    const meetup = club.meetups.find((m) => m.id === meetupId);
+    if (!meetup || !canCancelMeetup(club, meetup, db.meId)) return;
+    if (input.date !== meetup.date) {
+      const original = meetup.movedFrom ?? meetup.date;
+      meetup.movedFrom = input.date === original ? undefined : original;
+    }
+    meetup.date = input.date;
+    meetup.place = input.place;
+    meetup.videoLink = input.videoLink;
+    meetup.upTo = input.upTo;
+    club.meetups.sort((a, b) => a.date.localeCompare(b.date));
   },
 
   rsvp(db: DB, clubId: string, meetupId: string, value: Rsvp) {

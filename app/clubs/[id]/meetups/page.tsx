@@ -3,14 +3,8 @@
 import { use, useState } from "react";
 import { actions, useClub, useStore } from "@/lib/store";
 import { MeetupCard } from "@/components/meetup-card";
-import { STEPS } from "@/lib/progress";
-import { Button, Card, Field, SectionTitle, TopBar, inputClass } from "@/components/ui";
-
-function defaultDate() {
-  const d = new Date();
-  d.setDate(d.getDate() + 14);
-  return d.toISOString().slice(0, 10);
-}
+import { MeetupForm } from "@/components/meetup-form";
+import { Button, Card, SectionTitle, TopBar } from "@/components/ui";
 
 export default function Meetups({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ new?: string }> }) {
   const { id } = use(params);
@@ -18,11 +12,6 @@ export default function Meetups({ params, searchParams }: { params: Promise<{ id
   const { club, book } = useClub(id);
   const { mutate } = useStore();
   const [composing, setComposing] = useState(startNew === "1");
-  const [date, setDate] = useState(defaultDate);
-  const [time, setTime] = useState("19:00");
-  const [place, setPlace] = useState("");
-  const [videoLink, setVideoLink] = useState("");
-  const [upTo, setUpTo] = useState(100);
   if (!club) return null;
 
   const now = new Date();
@@ -46,53 +35,14 @@ export default function Meetups({ params, searchParams }: { params: Promise<{ id
         {composing && (
           <Card className="mt-4 space-y-3">
             <h2 className="font-serif text-lg font-semibold">New meetup</h2>
-            <div className="flex gap-2">
-              <Field label="Date">
-                <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputClass} />
-              </Field>
-              <Field label="Time">
-                <input type="time" value={time} onChange={(e) => setTime(e.target.value)} className={inputClass} />
-              </Field>
-            </div>
-            <Field label="Where">
-              <input value={place} onChange={(e) => setPlace(e.target.value)} placeholder="Someone's place, a café, or Video call" className={inputClass} />
-            </Field>
-            <Field label="Video link (optional)" hint="Paste a Zoom or Google Meet link for anyone joining remotely.">
-              <input value={videoLink} onChange={(e) => setVideoLink(e.target.value)} placeholder="https://" className={inputClass} />
-            </Field>
-            {!videoLink && (
-              <a href="https://meet.google.com/new" target="_blank" rel="noreferrer" className="inline-block text-sm font-medium text-accent">
-                Create a Google Meet link ↗
-              </a>
-            )}
-            {book && (
-              <Field label="Read up to">
-                <select value={upTo} onChange={(e) => setUpTo(Number(e.target.value))} className={inputClass}>
-                  {STEPS.map((n) => (
-                    <option key={n} value={n}>
-                      {n === 100 ? "The whole book" : `${n}% of the book`}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-            )}
-            <div className="flex gap-2 pt-1">
-              <Button variant="secondary" className="flex-1" onClick={() => setComposing(false)}>
-                Cancel
-              </Button>
-              <Button
-                className="flex-1"
-                disabled={!place.trim() || !date}
-                onClick={() => {
-                  mutate((d) => actions.addMeetup(d, id, { date: new Date(`${date}T${time}`).toISOString(), place: place.trim(), videoLink: videoLink.trim() || undefined, upTo }));
-                  setComposing(false);
-                  setPlace("");
-                  setVideoLink("");
-                }}
-              >
-                Schedule
-              </Button>
-            </div>
+            <MeetupForm
+              book={book}
+              onCancel={() => setComposing(false)}
+              onSave={(input) => {
+                mutate((d) => actions.addMeetup(d, id, input));
+                setComposing(false);
+              }}
+            />
           </Card>
         )}
 
