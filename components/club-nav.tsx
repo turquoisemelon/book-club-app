@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useClub } from "@/lib/store";
+import { pendingRequests } from "@/lib/join-requests";
 import { cx, SparkleIcon } from "./ui";
 
 const icons = {
@@ -21,9 +22,10 @@ export function ClubNav({ clubId }: { clubId: string }) {
   const pathname = usePathname();
   const { club, isHost } = useClub(clubId);
   const pending = club?.drafts.filter((d) => d.status === "pending").length ?? 0;
+  const asking = isHost && club ? pendingRequests(club).length : 0;
   const base = `/clubs/${clubId}`;
   const tabs = [
-    { href: base, label: "Home", icon: icons.home },
+    { href: base, label: "Home", icon: icons.home, badge: asking },
     { href: `${base}/polls`, label: "Polls", icon: icons.polls },
     { href: `${base}/talk`, label: "Talk", icon: icons.talk },
     { href: `${base}/meetups`, label: "Meetups", icon: icons.meetups },
@@ -35,11 +37,16 @@ export function ClubNav({ clubId }: { clubId: string }) {
         {tabs.map((t) => {
           const active = t.href === base ? pathname === base : pathname.startsWith(t.href);
           return (
-            <Link key={t.href} href={t.href} className={cx("flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-medium", active ? "text-accent" : "text-muted")}>
+            <Link key={t.href} href={t.href} className={cx("relative flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-medium", active ? "text-accent" : "text-muted")}>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 {t.icon}
               </svg>
               {t.label}
+              {!!t.badge && (
+                <span aria-label={`${t.badge} asking to join`} className="absolute right-[22%] top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] text-white">
+                  {t.badge}
+                </span>
+              )}
             </Link>
           );
         })}

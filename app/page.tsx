@@ -8,11 +8,14 @@ import { Logo } from "@/components/brand";
 import { Landing } from "@/components/landing";
 import { ShelfRow } from "@/components/shelf-row";
 import { SHELVES, shelfBooks } from "@/lib/shelves";
+import { pendingRequests } from "@/lib/join-requests";
 import { Avatar, AvatarStack, ButtonLink, ClubImage, Card, Pill, SectionTitle, SparkleIcon } from "@/components/ui";
 
 export default function Home() {
   const { db } = useStore();
   const myClubs = db.clubs.filter((c) => c.members.some((m) => m.userId === db.meId));
+  // Clubs you asked to join from the directory and haven't heard back from.
+  const waiting = db.clubs.filter((c) => db.requested.includes(c.id) && !myClubs.includes(c));
   const shelf = db.shelves[db.meId] ?? [];
   const me = db.users.find((u) => u.id === db.meId);
   const auth = useAuth();
@@ -60,6 +63,7 @@ export default function Home() {
           const next = club.meetups.find((m) => new Date(m.date) > new Date());
           const pending = club.drafts.filter((d) => d.status === "pending").length;
           const isHost = club.members.some((m) => m.userId === db.meId && m.role === "host");
+          const asking = isHost ? pendingRequests(club).length : 0;
           return (
             <Link key={club.id} href={`/clubs/${club.id}`} className="block active:scale-[0.99]">
               <Card className="flex gap-4">
@@ -74,6 +78,12 @@ export default function Home() {
                     <AvatarStack users={club.members.map((m) => db.users.find((u) => u.id === m.userId))} max={4} />
                     {next && <span className="text-xs text-muted">Meets {daysUntil(next.date)}</span>}
                   </div>
+                  {asking > 0 && (
+                    <div className="mt-3 flex items-center gap-1.5 rounded-lg bg-accent-soft px-2.5 py-1.5 text-xs font-medium text-accent">
+                      <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-accent" />
+                      {asking} {asking > 1 ? "people" : "person"} asking to join
+                    </div>
+                  )}
                   {isHost && pending > 0 && (
                     <div className="mt-3 flex items-center gap-1.5 rounded-lg bg-ai-soft px-2.5 py-1.5 text-xs font-medium text-ai">
                       <SparkleIcon size={12} />
@@ -85,7 +95,18 @@ export default function Home() {
             </Link>
           );
         })}
-        {myClubs.length === 0 && (
+        {waiting.map((club) => (
+          <Link key={club.id} href="/directory" className="block">
+            <Card className="flex items-center gap-3">
+              <ClubImage club={club} books={db.books} width={40} />
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-medium">{club.name}</p>
+                <p className="text-sm text-muted">Request sent. Waiting for the host.</p>
+              </div>
+            </Card>
+          </Link>
+        ))}
+        {myClubs.length === 0 && waiting.length === 0 && (
           <Card className="text-center text-sm text-muted">
             You&apos;re not in a club yet. Start one, or find one near you.
           </Card>

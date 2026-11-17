@@ -95,6 +95,14 @@ export type Announcement = {
   aiDrafted?: boolean;
 };
 
+// Someone asking to join a club from the directory. Only the club's hosts see these.
+export type JoinRequest = {
+  userId: string;
+  // A short hello to the host. May be empty.
+  note: string;
+  at: string;
+};
+
 export type PastRead = {
   id: string;
   bookId: string;
@@ -117,7 +125,8 @@ export type Club = {
   threads: Thread[];
   drafts: Draft[];
   announcements: Announcement[];
-  joinRequests: string[];
+  // Waiting for a host to answer. Hosts only; empty for everyone else.
+  joinRequests: JoinRequest[];
   // Optional so clubs saved before this field existed keep loading.
   pastReads?: PastRead[];
 };
@@ -138,5 +147,8 @@ export type DB = {
   books: Book[];
   clubs: Club[];
   shelves: Record<string, ShelfEntry[]>;
+  // Clubs you asked to join and haven't heard back from.
   requested: string[];
+  // Clubs whose host said no. Optional so older saved data keeps loading.
+  declined?: string[];
 };
