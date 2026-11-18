@@ -9,6 +9,7 @@ import { uid } from "./format";
 import { useAuth } from "./auth";
 import { getSupabase } from "./supabase/client";
 import { isAccountId, loadRemote, saveChanges, savePrefs } from "./remote";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 // Signed out (or before accounts are switched on), everything lives in this
 // browser's localStorage, as in the prototype. Signed in, clubs load from and
@@ -20,6 +21,10 @@ type Store = {
   // True when data is saved to your account rather than only on this device.
   synced: boolean;
   mutate: (fn: (draft: DB) => void) => void;
+  // For changes the server makes itself (join requests): runs `remote` first,
+  // then shows `local` without saving it again. Signed out, it's just `mutate`.
+  // Returns an error message, or null.
+  act: (remote: (supabase: SupabaseClient) => Promise<void>, local: (draft: DB) => void) => Promise<string | null>;
   reload: () => void;
 };
 
@@ -123,6 +128,30 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     [userId, setDb, reload],
   );
 
+  const act = useCallback(
+    async (remote: (supabase: SupabaseClient) => Promise<void>, local: (draft: DB) => void) => {
+      const supabase = getSupabase();
+      if (!userId || !supabase || dbRef.current?.meId !== userId) {
+        mutate(local);
+        return null;
+      }
+      try {
+        await saving.current;
+        await remote(supabase);
+      } catch (e) {
+        return e instanceof Error ? e.message : String(e);
+      }
+      const prev = dbRef.current;
+      if (prev) {
+        const next = structuredClone(prev);
+        local(next);
+        setDb(next);
+      }
+      return null;
+    },
+    [userId, mutate, setDb],
+  );
+
   if (loadError && !db) {
     return (
       <div className="px-6 pt-24 text-center">
@@ -138,7 +167,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     return <div className="min-h-dvh" />;
   }
   return (
-    <StoreContext.Provider value={{ db, synced: Boolean(userId), mutate, reload }}>
+    <StoreContext.Provider value={{ db, synced: Boolean(userId), mutate, act, reload }}>
       {saveError && (
         <div role="alert" className="sticky top-0 z-30 bg-danger px-4 py-2 text-sm text-white">
           That change didn&apos;t save: {saveError}. Showing the latest saved version.
@@ -233,6 +262,12 @@ export const actions = {
 
   requestToJoin(db: DB, clubId: string) {
     if (!db.requested.includes(clubId)) db.requested.push(clubId);
+  },
+
+  answerJoinRequest(db: DB, clubId: string, userId: string, approve: boolean) {
+    const club = clubIn(db, clubId);
+    club.joinRequests = club.joinRequests.filter((r) => r.userId !== userId);
+    if (approve && !club.members.some((m) => m.userId === userId)) club.members.push({ userId, role: "member", progress: 0 });
   },
 
   setOpen(db: DB, clubId: string, open: boolean) {

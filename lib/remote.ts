@@ -4,12 +4,13 @@
 // prototype. After each change, `saveChanges` compares the DB before and after
 // and writes only what changed: books, club rows, member rows, and your shelves.
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Book, Club, DB, Membership, ShelfEntry, User } from "./types";
+import type { Book, Club, DB, JoinRequest, Membership, ShelfEntry, User } from "./types";
 import { DB_VERSION } from "./sample-data";
 import { validRating } from "./books";
 
 // Parts of a club stored together as JSON in clubs.content for now.
-type ClubContent = Pick<Club, "polls" | "meetups" | "threads" | "drafts" | "announcements" | "joinRequests" | "pastReads">;
+// (Join requests have their own table, so only hosts can see them.)
+type ClubContent = Pick<Club, "polls" | "meetups" | "threads" | "drafts" | "announcements" | "pastReads">;
 
 type BookRow = {
   id: string;
@@ -38,6 +39,8 @@ type ClubRow = {
 
 type MemberRow = { club_id: string; user_id: string; role: "host" | "member"; progress: number };
 
+type JoinRequestRow = { club_id: string; user_id: string; note: string; status: "pending" | "declined"; created_at: string };
+
 type ShelfRow = {
   user_id: string;
   book_id: string;
@@ -47,7 +50,8 @@ type ShelfRow = {
   read_at: string | null;
 };
 
-// Settings people keep per device: directory join requests. (Shelves used to
+// Settings people keep per device: directory join requests, until
+// 0009_join_requests.sql runs and they're saved for real. (Shelves used to
 // live here too; `legacyShelf` picks up any saved before they moved.)
 type LocalPrefs = Pick<DB, "requested"> & { shelves?: DB["shelves"] };
 
@@ -172,7 +176,7 @@ function clubFromRow(r: ClubRow, members: Membership[]): Club {
     threads: c.threads ?? [],
     drafts: c.drafts ?? [],
     announcements: c.announcements ?? [],
-    joinRequests: c.joinRequests ?? [],
+    joinRequests: [],
     pastReads: c.pastReads ?? [],
   };
 }
@@ -184,7 +188,6 @@ function clubToRow(club: Club): ClubRow {
     threads: club.threads,
     drafts: club.drafts,
     announcements: club.announcements,
-    joinRequests: club.joinRequests,
     pastReads: club.pastReads ?? [],
   };
   return {
@@ -222,7 +225,18 @@ export async function loadRemote(supabase: SupabaseClient, userId: string): Prom
   if (membersRes.error) throw membersRes.error;
   const memberRows = (membersRes.data ?? []) as MemberRow[];
 
-  const ids = Array.from(new Set([userId, ...memberRows.map((m) => m.user_id)]));
+  // Your own requests, and requests to clubs you host. Before
+  // 0009_join_requests.sql runs the table is missing: fall back to this device.
+  const requestsRes = await supabase
+    .from("join_requests")
+    .select("club_id, user_id, note, status, created_at")
+    .in("status", ["pending", "declined"])
+    .order("created_at");
+  const requestRows = requestsRes.error ? null : ((requestsRes.data ?? []) as JoinRequestRow[]);
+  const hostOf = new Set(memberRows.filter((m) => m.user_id === userId && m.role === "host").map((m) => m.club_id));
+  const incoming = (requestRows ?? []).filter((r) => r.status === "pending" && r.user_id !== userId && hostOf.has(r.club_id));
+
+  const ids = Array.from(new Set([userId, ...memberRows.map((m) => m.user_id), ...incoming.map((r) => r.user_id)]));
   const [profilesRes, shelfRows] = await Promise.all([
     // "*" so this keeps working before 0007_avatars.sql adds avatar_url.
     supabase.from("profiles").select("*").in("id", ids),
@@ -244,12 +258,17 @@ export async function loadRemote(supabase: SupabaseClient, userId: string): Prom
     savedAtByClub.set(r.id, r.updated_at);
   }
 
-  const clubs = clubRows.map((r) =>
-    clubFromRow(
+  const clubs = clubRows.map((r) => {
+    const club = clubFromRow(
       r,
       memberRows.filter((m) => m.club_id === r.id).map((m) => ({ userId: m.user_id, role: m.role, progress: m.progress })),
-    ),
-  );
+    );
+    club.joinRequests = incoming
+      .filter((q) => q.club_id === r.id && !club.members.some((m) => m.userId === q.user_id))
+      .map((q): JoinRequest => ({ userId: q.user_id, note: q.note, at: q.created_at }));
+    return club;
+  });
+  const mine = (status: JoinRequestRow["status"]) => (requestRows ?? []).filter((r) => r.user_id === userId && r.status === status).map((r) => r.club_id);
 
   const shelves: DB["shelves"] = {};
   for (const r of shelfRows) (shelves[r.user_id] ??= []).push(shelfFromRow(r));
@@ -281,7 +300,8 @@ export async function loadRemote(supabase: SupabaseClient, userId: string): Prom
   return {
     version: DB_VERSION,
     meId: userId,
-    requested: prefs.requested,
+    requested: requestRows ? mine("pending") : prefs.requested,
+    declined: requestRows ? mine("declined") : [],
     shelves,
     users: Array.from(users.values()),
     books,

@@ -25,6 +25,7 @@ Run each file in [`supabase/migrations`](../supabase/migrations) once, in number
 | [`0005_fractional_ratings.sql`](../supabase/migrations/0005_fractional_ratings.sql) | Lets ratings like 2.25 be saved |
 | [`0006_progress_percent.sql`](../supabase/migrations/0006_progress_percent.sql) | Reading progress in quarters of the book (25/50/75/100%) instead of chapters. Run after the app update that uses quarters is live. |
 | [`0007_avatars.sql`](../supabase/migrations/0007_avatars.sql) | Profile pictures |
+| [`0009_join_requests.sql`](../supabase/migrations/0009_join_requests.sql) | "Ask to join" from the directory: requests hosts can approve or decline |
 
 When a new file appears here in a later update, run just that one. Running a file twice does no harm.
 
@@ -107,3 +108,9 @@ By default, Supabase's sign-in link only works in the same browser that asked fo
 4. Request a new link and open it anywhere. You land on your account page, signed in, in whichever browser opened it.
 
 Each link works once and expires after an hour.
+
+## 9. Join request emails
+
+When someone asks to join a club from the directory, its hosts get one email about it, and the person gets one email when a host approves them. Declining sends nothing. Each request emails once; nobody can ask the same club twice.
+
+These use the same Vercel settings as the Talk emails (section 8): `SUPABASE_SECRET_KEY` and `RESEND_API_KEY`, plus `NOTIFY_EMAIL_FROM` if you want a different sender. If those are already set, there's nothing more to do once `0009_join_requests.sql` has run. Without them, requests still show up on the club page and on Home; only the emails are skipped.

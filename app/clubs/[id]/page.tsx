@@ -12,6 +12,7 @@ import { DeleteClub } from "@/components/delete-club";
 import { ClubDetails } from "@/components/club-details";
 import { CoverSheet } from "@/components/cover-picker";
 import { CurrentReadForm } from "@/components/current-read-form";
+import { JoinRequests } from "@/components/join-requests";
 import { AiLabel, Avatar, BookCover, Button, ButtonLink, Card, SectionTitle, SparkleIcon, Toggle, TopBar } from "@/components/ui";
 import { useStore } from "@/lib/store";
 
@@ -42,6 +43,8 @@ export default function ClubHome({ params }: { params: Promise<{ id: string }> }
       />
       <main className="px-4">
         <ClubDetails club={club} isHost={isHost} />
+
+        {isHost && <JoinRequests club={club} />}
 
         {isHost && pending > 0 && (
           <Link href={`/clubs/${id}/cohost`} className="mt-4 flex items-center gap-3 rounded-2xl bg-ai-soft p-4 text-ai active:opacity-80">
